@@ -1,0 +1,18 @@
+{
+  "id": "/tribu-test/",
+  "name": "Tribu TEST",
+  "short_name": "Tribu T",
+  "description": "Le cocon de la famille : chat, agenda, carte et frigo partagés.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF7F4",
+  "theme_color": "#FFF7F4",
+  "icons": [
+    { "src": "icons/test-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/test-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/test-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

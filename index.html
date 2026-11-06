@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#FFF7F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1D1615" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Tribu — le cocon de la famille.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tribu">
+<title>Tribu</title>
+<link rel="manifest" id="manifest" href="manifest.webmanifest">
+<link rel="icon" id="favicon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" id="appleIcon" href="icons/apple-touch-icon.png">
+<script>
+  /* Environnement : prod = github.io/tribu/, test = github.io/tribu-test/, sinon local (PC). */
+  (function(){
+    var h=location.hostname, p=location.pathname;
+    var env = /github\.io$/.test(h) ? (/-test\//.test(p) ? 'test' : 'prod') : 'local';
+    window.TRIBU_ENV = env;
+    if (env !== 'prod') {
+      document.getElementById('manifest').href = 'manifest-test.webmanifest';
+      document.getElementById('favicon').href = 'icons/test-icon.svg';
+      document.getElementById('appleIcon').href = 'icons/test-apple-touch-icon.png';
+      document.title = 'Tribu ' + env.toUpperCase();
+      document.querySelector('meta[name="apple-mobile-web-app-title"]').content = 'Tribu T';
+    }
+    /* Thème et taille du texte appliqués avant l'affichage, pour éviter un flash. */
+    try {
+      var s = JSON.parse(localStorage.getItem('tribu.' + env + '.reglages') || '{}');
+      if (s.theme === 'clair' || s.theme === 'sombre') document.documentElement.dataset.theme = s.theme;
+      document.documentElement.dataset.fs = String(s.fs == null ? 1 : s.fs);
+    } catch (e) {}
+  })();
+</script>
+<script src="version.js"></script>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true"><circle cx="15" cy="15" r="13" stroke="currentColor" stroke-width="2"/><path d="M8 16l7-6 7 6M10.5 14.5V21h9v-6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Tribu</span>
+      <span class="tag" id="envTag" hidden></span>
+    </div>
+    <button class="avatar" id="meBtn" aria-label="Réglages et profil">?</button>
+  </header>
+
+  <main id="main">
+    <section class="screen" data-screen="today">
+      <p class="muted" id="todayDate"></p>
+      <h1 id="hello">Bonjour</h1>
+      <div id="todayDragon"></div>
+      <div id="todayJeux" class="jeux"></div>
+      <div id="todayPoll"></div>
+      <div id="todayAgenda" class="ev-list"></div>
+      <div id="todayRappels" class="ev-list"></div>
+      <h2 class="h3">La tribu</h2>
+      <div class="tribe" id="tribe"></div>
+      <div id="todayMsgs"></div>
+      <div id="todayCourses"></div>
+    </section>
+    <section class="screen" data-screen="dragon" id="dragon" hidden></section>
+    <section class="screen chat" data-screen="chat" hidden>
+      <div class="chat-list" id="chatList" aria-live="polite"></div>
+    </section>
+    <section class="screen" data-screen="agenda" id="agenda" hidden>
+      <div class="ag-head">
+        <h1>Agenda</h1>
+        <div class="ag-nav">
+          <button class="round sm" data-week="-1" aria-label="Semaine précédente"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="link" data-week="0">Aujourd'hui</button>
+          <button class="round sm" data-week="1" aria-label="Semaine suivante"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+      <p class="muted" id="agWeek"></p>
+      <div class="days" id="agDays"></div>
+      <h2 class="h3" id="agTitle"></h2>
+      <div class="ev-list" id="agList"></div>
+      <h2 class="h3">Rappels récurrents</h2>
+      <p class="note sub">Des choses à faire à heure fixe, qui se répètent. On les coche chaque jour sur « Aujourd'hui ».</p>
+      <div class="ev-list" id="agRappels"></div>
+    </section>
+    <section class="screen" data-screen="map" id="carte" hidden>
+      <h1>Où est la tribu ?</h1>
+      <div id="geoAsk"></div>
+      <div class="map" id="map">
+        <div class="map-layer" id="mapTiles"></div>
+        <div class="map-layer" id="mapMarks"></div>
+        <div class="map-ctl" id="mapCtl">
+          <button data-z="1" aria-label="Zoomer">+</button>
+          <button data-z="-1" aria-label="Dézoomer">−</button>
+          <button data-fit aria-label="Voir toute la tribu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        </div>
+        <div class="map-banner" id="mapBanner" hidden></div>
+        <a class="attrib" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© les contributeurs d'OpenStreetMap</a>
+      </div>
+      <p class="note" id="geoInfo"></p>
+      <div class="ev-list" id="mapList"></div>
+      <button class="primary" id="arrive">Je suis bien arrivé·e</button>
+      <button class="toggle card" id="discret" aria-pressed="false" style="margin-top:10px"><span><b>Mode discret</b><br><span class="note">Masquer ma position (cadeau surprise…)</span></span><span class="sw"><i></i></span></button>
+      <button class="ghost" id="lieuxBtn" style="width:100%;margin-top:10px">Gérer les lieux (Maison, Collège…)</button>
+    </section>
+    <section class="screen" data-screen="fridge" id="fridge" hidden>
+      <h1>Le frigo</h1>
+      <div class="seg two fr-seg" id="frSeg"></div>
+      <div class="row fr-add">
+        <label class="grow"><span class="sr">Ajouter</span><input class="input" id="frInput" autocomplete="off"></label>
+        <button class="small acc" id="frAdd">Ajouter</button>
+      </div>
+      <div id="frList"></div>
+    </section>
+  </main>
+
+  <div class="composer" id="composer" hidden>
+    <button class="round plus" id="chatPlus" aria-label="Ajouter un sondage ou une photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <label class="grow"><span class="sr">Message</span><textarea id="chatInput" rows="1" maxlength="4000" placeholder="Écrire à la tribu…"></textarea></label>
+    <button class="round send" id="chatSend" aria-label="Envoyer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l16-8-6 16-3-7z"/></svg></button>
+  </div>
+
+  <button class="fab" id="agAdd" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter</button>
+
+  <nav class="tabs" aria-label="Navigation">
+    <button data-tab="today" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>Accueil</span>
+    </button>
+    <button data-tab="chat">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>Chat</span><i class="badge" id="chatBadge" hidden></i>
+    </button>
+    <button data-tab="agenda">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Agenda</span>
+    </button>
+    <button data-tab="map">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>Carte</span>
+    </button>
+    <button data-tab="fridge">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M6 10h12M9 6v2M9 13v3"/></svg><span>Frigo</span>
+    </button>
+    <button data-tab="dragon">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c-4 0-7 6-7 11a7 7 0 0014 0c0-5-3-11-7-11z"/></svg><span>Œuf</span>
+    </button>
+  </nav>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="sheet-head">
+    <h2 id="sheetTitle"></h2>
+    <button class="round" id="sheetClose" aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div id="sheetBody" class="sheet-body"></div>
+</div>
+
+<!-- Rejoindre la tribu (premier lancement) -->
+<div class="join" id="join" hidden>
+  <div class="join-in">
+    <svg class="join-logo" width="72" height="72" viewBox="0 0 30 30" fill="none" aria-hidden="true"><circle cx="15" cy="15" r="13" stroke="currentColor" stroke-width="2"/><path d="M8 16l7-6 7 6M10.5 14.5V21h9v-6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h1>Rejoindre la tribu</h1>
+    <p class="join-text" id="joinText">Scanne le QR code d'invitation avec l'appareil photo, ou colle ici le lien ou le code reçu.</p>
+    <label class="label" for="joinCode">Lien ou code d'invitation</label>
+    <input id="joinCode" class="input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Colle le lien ou le code">
+    <button class="primary" id="joinBtn">Rejoindre</button>
+    <button class="ghost" id="scanBtn" hidden>Scanner le QR code</button>
+    <p class="join-err" id="joinErr" role="alert"></p>
+    <p class="muted center">Pas de code ? Demande à l'administrateur de la tribu de t'inviter depuis son téléphone.</p>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span id="toastMsg"></span>
+  <button id="toastUndo" hidden>Annuler</button>
+</div>
+
+<script src="js/qr.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/app.js"></script>
+<script src="js/chat.js"></script>
+<script src="js/notif.js"></script>
+<script src="js/agenda.js"></script>
+<script src="js/frigo.js"></script>
+<script src="js/carte.js"></script>
+<script src="js/jeux-data.js"></script>
+<script src="js/jeux.js"></script>
+<script src="js/profil.js"></script>
+<script src="js/dragon.js"></script>
+</body>
+</html>
