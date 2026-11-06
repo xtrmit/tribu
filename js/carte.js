@@ -55,6 +55,12 @@
 
   /* ---------- Envoi de ma position ---------- */
   function geoOn() { return S.geo === 'on' && 'geolocation' in navigator; }
+  // Si le téléphone autorise déjà la position, le partage se rétablit tout seul (après une mise à jour, un effacement…).
+  if (S.geo !== 'on' && 'geolocation' in navigator && navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: 'geolocation' }).then(p => {
+      if (p.state === 'granted') { S.geo = 'on'; save(); renderAsk(); setTimeout(() => sendPosition(true), 2000); }
+    }).catch(() => {});
+  }
   function sendPosition(force) {
     if (!me() || !geoOn() || myDiscret()) return;
     if (!force && Date.now() - lastSent < EVERY - 5000) return;

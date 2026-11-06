@@ -77,7 +77,13 @@
   // Renvoie l'abonnement existant au serveur au démarrage (l'adresse d'abonnement peut changer).
   async function refresh() {
     if (!supported() || !me() || Notification.permission !== 'granted') return;
-    try { const s = await currentSub(); if (s) await Sync.push('abonner', { abonnement: s.toJSON() }); } catch (e) {}
+    try {
+      // Permission déjà accordée : on restaure l'abonnement sans rien demander (après une mise à jour, un changement de compte…).
+      let s = await currentSub();
+      if (!s) { const info = await Sync.push('cle'); const reg = await navigator.serviceWorker.ready; s = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(info.cle) }); }
+      await Sync.push('abonner', { abonnement: s.toJSON() });
+      const box = document.getElementById('notifBox'); if (box && box.offsetParent) mount(box);
+    } catch (e) {}
   }
   setTimeout(refresh, 3000);
 
