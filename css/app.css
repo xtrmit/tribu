@@ -390,3 +390,15 @@ input[type=date].input{padding:0 12px}
 .dg-tile b{font-family:'Fredoka',sans-serif;font-weight:600;font-size:1.05em;display:block}
 .dg-tile span span{font-size:.85em;color:var(--muted);font-weight:700}
 .dg-nom{margin-bottom:8px}
+
+/* Répondre à un message */
+.bubble .quote,.reply-bar .quote{display:block;background:var(--mb,var(--accent-soft));color:var(--text);border-left:4px solid var(--mi,var(--accent));border-radius:10px;padding:5px 10px;margin:0 0 6px;font-size:.88em;line-height:1.3}
+.bubble.has-ph .quote{margin:0 0 4px}
+.quote b{display:block;color:var(--mi,var(--accent));font-size:.9em}
+.quote span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.reply-bar{flex-basis:100%;display:flex;align-items:center;gap:6px}
+.reply-bar .quote{flex:1;min-width:0;margin:0}
+.reply-bar .x{flex:none;width:44px;height:44px;border:0;background:none;color:var(--muted,var(--text));font-size:1.6em;line-height:1}
+.composer{flex-wrap:wrap}
+.msg.flash .bubble{animation:flash 1.2s ease}
+@keyframes flash{0%,40%{box-shadow:0 0 0 4px var(--accent-soft)}100%{box-shadow:0 0 0 0 transparent}}

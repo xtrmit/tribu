@@ -95,7 +95,7 @@ self.addEventListener('push', e => {
     // Tribu déjà ouverte et au premier plan : pas de notification, l'écran se met à jour tout seul.
     if (list.some(c => c.visibilityState === 'visible' && c.focused)) return;
     return self.registration.showNotification(d.title || 'Tribu', {
-      body: d.body || '', icon: 'icons/icon-192.png', badge: 'icons/badge-96.png',
+      body: d.body || '', icon: /\/tribu\/$/.test(self.registration.scope) ? 'icons/icon-192.png' : 'icons/test-icon-192.png', badge: 'icons/badge-96.png',
       tag: d.tag || 'tribu', renotify: true, vibrate: [80, 40, 80], data: { tab: d.tab || 'today' }
     });
   }));

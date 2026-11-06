@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Tribu">
 <title>Tribu</title>
 <link rel="manifest" id="manifest" href="manifest.webmanifest">
-<link rel="icon" id="favicon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" id="favicon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" id="appleIcon" href="icons/apple-touch-icon.png">
 <script>
   /* Environnement : prod = github.io/tribu/, test = github.io/tribu-test/, sinon local (PC). */
@@ -22,7 +22,7 @@
     window.TRIBU_ENV = env;
     if (env !== 'prod') {
       document.getElementById('manifest').href = 'manifest-test.webmanifest';
-      document.getElementById('favicon').href = 'icons/test-icon.svg';
+      document.getElementById('favicon').href = 'icons/test-icon.svg'; document.getElementById('favicon').type = 'image/svg+xml';
       document.getElementById('appleIcon').href = 'icons/test-apple-touch-icon.png';
       document.title = 'Tribu ' + env.toUpperCase();
       document.querySelector('meta[name="apple-mobile-web-app-title"]').content = 'Tribu T';

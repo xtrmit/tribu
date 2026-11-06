@@ -84,14 +84,16 @@
       const reacts = Object.keys(counts).length ? `<div class="reacts">${Object.keys(counts).map(e => `<button class="react${myR && myR.data.e === e ? ' mine' : ''}" data-react="${esc(m.uid)}" data-e="${e}">${e} ${counts[e]}</button>`).join('')}</div>` : '';
       const ph = m.data.photo;
       const body = (ph ? `<img class="ph" src="${esc(ph.th)}" alt="Photo" data-photo="${esc(ph.id)}" data-msgid="${esc(m.uid)}" style="aspect-ratio:${ph.w}/${ph.h}">` : '') + (m.data.t ? (ph ? '<span class="cap">' + nl2br(m.data.t) + '</span>' : nl2br(m.data.t)) : '');
+      const re = m.data.re;
+      const quote = re ? `<span class="quote m-${esc(re.m)}" data-goto="${esc(re.u)}"><b>${esc(re.m === me() ? 'Toi' : memb(re.m).nom)}</b><span>${re.ph ? '📷 Photo' + (re.t ? ' · ' : '') : ''}${esc(re.t || '')}</span></span>` : '';
       const meta = `<span class="meta">${m.local ? 'envoi… · ' : ''}${m.data.edit ? 'modifié · ' : ''}${hhmm(it.t)}</span>`;
       if (mine) {
-        html += `<div class="msg me"><button class="bubble${ph ? ' has-ph' : ''}" data-msg="${esc(m.uid)}">${body}${meta}</button>${reacts}</div>`;
+        html += `<div class="msg me" data-uid="${esc(m.uid)}"><button class="bubble${ph ? ' has-ph' : ''}" data-msg="${esc(m.uid)}">${quote}${body}${meta}</button>${reacts}</div>`;
       } else {
-        html += `<div class="msg other${grouped ? ' grouped' : ''}">
+        html += `<div class="msg other${grouped ? ' grouped' : ''}" data-uid="${esc(m.uid)}">
           <span class="av sm m-${esc(m.auteur)}">${grouped ? '' : a.ini}</span>
           <div class="col">${grouped ? '' : `<span class="name m-${esc(m.auteur)}">${esc(a.nom)}</span>`}
-          <button class="bubble${ph ? ' has-ph' : ''}" data-msg="${esc(m.uid)}">${body}${meta}</button>${reacts}</div></div>`;
+          <button class="bubble${ph ? ' has-ph' : ''}" data-msg="${esc(m.uid)}">${quote}${body}${meta}</button>${reacts}</div></div>`;
       }
     }
     list.innerHTML = html;
@@ -134,7 +136,10 @@
     const t = input.value.trim();
     if (!t || !me()) return;
     input.value = ''; autoGrow();
-    await Sync.put('msg', 'msg:' + newId(), { t: t.slice(0, 4000), at: Date.now() });
+    const d = { t: t.slice(0, 4000), at: Date.now() };
+    if (replyTo) d.re = replyTo;
+    cancelReply();
+    await Sync.put('msg', 'msg:' + newId(), d);
     list.scrollTop = list.scrollHeight;
   }
   function autoGrow() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
@@ -160,12 +165,14 @@
     const mine = m.auteur === me();
     openSheet(mine ? 'Mon message' : 'Message de ' + memb(m.auteur).nom, `
       <div class="emoji-row">${EMOJIS.map(e => `<button data-e="${e}" aria-label="Réagir ${e}">${e}</button>`).join('')}</div>
+      <button class="ghost" data-act="reply">Répondre</button>
       ${mine ? '<button class="ghost" data-act="edit">Modifier</button><button class="ghost danger" data-act="del">Supprimer</button>' : ''}
       ${m.data.t ? '<button class="ghost" data-act="copy">Copier le texte</button>' : ''}
     `, e => {
       const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.e) { react(uid, b.dataset.e); closeSheet(); vib(8); }
       else if (b.dataset.act === 'copy') { copy(m.data.t, 'Texte copié'); closeSheet(); }
+      else if (b.dataset.act === 'reply') { closeSheet(); startReply(m); }
       else if (b.dataset.act === 'del') {
         const keep = Object.assign({}, m.data);
         Sync.remove('msg', uid); closeSheet();
@@ -223,7 +230,10 @@
       if (!e.target.closest('[data-act="send"]')) return;
       const id = me() + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       await Sync.queuePhoto(id, img.b64);
-      await Sync.put('msg', 'msg:' + newId(), { t: $('phCap').value.trim().slice(0, 500), at: Date.now(), photo: { id, w: img.w, h: img.h, th: img.th } });
+      const d = { t: $('phCap').value.trim().slice(0, 500), at: Date.now(), photo: { id, w: img.w, h: img.h, th: img.th } };
+      if (replyTo) d.re = replyTo;
+      cancelReply();
+      await Sync.put('msg', 'msg:' + newId(), d);
       closeSheet(); showTab('chat');
       setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
     };
@@ -318,6 +328,9 @@
 
   // Clics dans le fil et sur l'écran Aujourd'hui (sondage, derniers messages)
   function onClick(e) {
+    if (swallow) { swallow = false; return; }
+    const q = e.target.closest('[data-goto]');
+    if (q) { goTo(q.dataset.goto); return; }
     const v = e.target.closest('[data-vote]');
     if (v) { vote(v.dataset.vote, +v.dataset.o); vib(8); return; }
     const r = e.target.closest('[data-react]');
@@ -340,6 +353,51 @@
   list.addEventListener('click', onClick);
   $('todayPoll').addEventListener('click', onClick);
   $('todayMsgs').addEventListener('click', onClick);
+
+  /* ---------- Répondre à un message (comme sur WhatsApp) ---------- */
+  let replyTo = null;
+  const replyBar = document.createElement('div');
+  replyBar.className = 'reply-bar'; replyBar.hidden = true;
+  composer.insertBefore(replyBar, composer.firstChild);
+  function startReply(m) {
+    if (!m || m.data.sys) return;
+    replyTo = { u: m.uid, m: m.auteur, t: String(m.data.t || '').replace(/\s+/g, ' ').slice(0, 140) };
+    if (m.data.photo) replyTo.ph = true;
+    replyBar.className = 'reply-bar m-' + m.auteur;
+    replyBar.innerHTML = `<span class="quote"><b>Réponse à ${esc(m.auteur === me() ? 'toi-même' : memb(m.auteur).nom)}</b><span>${replyTo.ph ? '📷 Photo' + (replyTo.t ? ' · ' : '') : ''}${esc(replyTo.t)}</span></span><button class="x" data-act="noreply" aria-label="Annuler la réponse">×</button>`;
+    replyBar.hidden = false;
+    input.focus(); vib(8);
+  }
+  function cancelReply() { replyTo = null; replyBar.hidden = true; replyBar.innerHTML = ''; }
+  replyBar.addEventListener('click', e => { if (e.target.closest('[data-act="noreply"]')) cancelReply(); });
+  function goTo(uid) {
+    const el = list.querySelector(`[data-uid="${CSS.escape(uid)}"]`);
+    if (!el) { toast('Ce message n\'est plus affiché'); return; }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  }
+  // Glisser une bulle vers la droite pour y répondre.
+  let sw = null, swallow = false;
+  list.addEventListener('touchstart', e => {
+    const b = e.target.closest('.bubble'); if (!b || e.touches.length > 1) { sw = null; return; }
+    sw = { b, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, on: false };
+  }, { passive: true });
+  list.addEventListener('touchmove', e => {
+    if (!sw) return;
+    const dx = e.touches[0].clientX - sw.x, dy = e.touches[0].clientY - sw.y;
+    if (!sw.on) { if (Math.abs(dy) > 12) { sw = null; return; } if (dx > 12) sw.on = true; else return; }
+    sw.dx = Math.max(0, Math.min(dx, 80));
+    sw.b.style.transform = `translateX(${sw.dx}px)`;
+    if (sw.dx >= 60 && !sw.vib) { vib(8); sw.vib = true; }
+  }, { passive: true });
+  list.addEventListener('touchend', () => {
+    if (!sw) return;
+    const s = sw; sw = null;
+    s.b.style.transition = 'transform .15s'; s.b.style.transform = '';
+    setTimeout(() => { s.b.style.transition = ''; }, 160);
+    if (s.on) { swallow = true; setTimeout(() => { swallow = false; }, 350); }
+    if (s.dx >= 60) startReply(data.msgs.find(x => x.uid === s.b.dataset.msg));
+  });
 
   /* ---------- Branchements ---------- */
   window.onTab = t => {
