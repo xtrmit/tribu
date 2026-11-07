@@ -10,7 +10,7 @@ const CACHE = PREFIX + self.TRIBU_VERSION;
 const LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(self.location.hostname) || !/github\.io$/.test(self.location.hostname);
 
 const ASSETS = [
-  './', 'index.html', 'css/app.css', 'js/app.js', 'js/sync.js', 'js/qr.js', 'js/chat.js', 'js/notif.js', 'js/agenda.js', 'js/frigo.js', 'js/carte.js', 'js/jeux-data.js', 'js/jeux.js', 'js/profil.js', 'js/dragon.js', 'js/echecs.js', 'js/defis.js', 'js/jeux2.js', 'dragon/vignette.jpg', 'dragon/vignette-oeuf.jpg', 'dragon/lettre.jpg', 'icons/badge-96.png', 'version.js',
+  './', 'index.html', 'css/app.css', 'js/app.js', 'js/sync.js', 'js/qr.js', 'js/chat.js', 'js/notif.js', 'js/agenda.js', 'js/frigo.js', 'js/carte.js', 'js/jeux-data.js', 'js/jeux.js', 'js/profil.js', 'js/dragon.js', 'js/echecs.js', 'js/defis.js', 'js/jeux2.js', 'js/jeux3.js', 'dragon/vignette.jpg', 'dragon/vignette-oeuf.jpg', 'dragon/lettre.jpg', 'icons/badge-96.png', 'version.js',
   'manifest.webmanifest', 'manifest-test.webmanifest',
   'fonts/fredoka-latin-500-normal.woff2', 'fonts/fredoka-latin-600-normal.woff2',
   'fonts/nunito-latin-400-normal.woff2', 'fonts/nunito-latin-600-normal.woff2',
