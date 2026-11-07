@@ -198,7 +198,7 @@
     openSheet('Ajouter', `
       <button class="ghost big" data-act="poll"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Sondage</button>
       <button class="ghost big" data-act="camera"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Prendre une photo</button>
-      <button class="ghost big" data-act="defi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 20h9M9 20c0-3 1-5 2-7-2 0-3-1-3-3l4-5c3 1 5 4 5 8 0 2-.5 4-1 7"/><circle cx="12.5" cy="8.5" r=".6"/></svg>Lancer un défi (échecs)</button>
+      <button class="ghost big" data-act="defi"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 20h9M9 20c0-3 1-5 2-7-2 0-3-1-3-3l4-5c3 1 5 4 5 8 0 2-.5 4-1 7"/><circle cx="12.5" cy="8.5" r=".6"/></svg>Lancer un défi (jeux)</button>
       <button class="ghost big" data-act="photo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg>Choisir dans la galerie</button>
     `, e => {
       const b = e.target.closest('[data-act]'); if (!b) return;

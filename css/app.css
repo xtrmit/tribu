@@ -461,3 +461,38 @@ body.in-partie main > .screen{display:none !important}
 .df-moves{font-size:.8em;color:var(--muted);max-height:3.4em;overflow:auto}
 .df-promo{display:flex;gap:10px;justify-content:center}
 .df-promo button{width:68px;height:68px;border-radius:14px;border:1.5px solid var(--line);background:#F6E7D2;position:relative}
+/* Puissance 4, morpion, bataille navale */
+.df-plateau{display:flex;flex-direction:column;gap:4px}
+.j-disc{width:16px;height:16px;border-radius:50%;flex:none;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.55),var(--mi) 55%,var(--mi));box-shadow:inset 0 -2px 2px rgba(0,0,0,.25)}
+.p4{padding:10px 10px 14px;border-radius:20px;background:linear-gradient(160deg,#D2604E,#A63A2C);box-shadow:0 8px 20px rgba(120,40,20,.28),inset 0 1px 0 rgba(255,255,255,.3)}
+.p4-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.p4-cell{aspect-ratio:1;border-radius:50%;background:var(--bg);box-shadow:inset 0 3px 5px rgba(0,0,0,.25);position:relative;overflow:hidden}
+.p4-cell i{position:absolute;inset:6%;border-radius:50%;display:block;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.55),var(--mi) 55%,var(--mi));box-shadow:inset 0 -3px 4px rgba(0,0,0,.3)}
+.p4-cell i.drop{animation:p4drop .35s cubic-bezier(.5,0,.75,0) both}
+@keyframes p4drop{from{transform:translateY(var(--from))}to{transform:none}}
+.p4-cell{overflow:visible}
+.p4-cell.win i{box-shadow:0 0 0 3px #fff,0 0 12px 3px #FFD76A}
+.p4-arrows{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;padding:0 10px;height:16px}
+.p4-arrows span{text-align:center;color:var(--accent);font-size:.75em;opacity:0}
+.p4-arrows span.on{opacity:1}
+.mp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));aspect-ratio:1;background:var(--surface);border-radius:20px;border:1px solid var(--line);padding:10px;box-shadow:0 6px 16px rgba(80,40,20,.1)}
+.mp.fade{opacity:.55}
+.mp-cell{position:relative;min-width:0}
+.mp-cell:nth-child(-n+6){border-bottom:4px solid #E3CDBB}
+.mp-cell:not(:nth-child(3n)){border-right:4px solid #E3CDBB}
+.mp-cell svg{position:absolute;inset:16%;width:68%;height:68%;fill:none;stroke:var(--mi);stroke-width:12;stroke-linecap:round}
+.mp-cell svg path,.mp-cell svg circle{stroke-dasharray:300;animation:mpdraw .35s ease-out both}
+@keyframes mpdraw{from{stroke-dashoffset:300}to{stroke-dashoffset:0}}
+.mp-cell.win{background:rgba(255,215,106,.35);border-radius:12px}
+.mp-mark{font-weight:800;color:var(--mi)}
+.mp-ban{text-align:center;font-weight:800;font-size:.88em;background:var(--accent-soft);color:var(--accent);border-radius:12px;padding:8px}
+.bn-title{font-weight:800;font-size:.85em;margin:6px 0 2px;display:flex;justify-content:space-between}
+.sea{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:2px;background:#B9D7E6;padding:4px;border-radius:12px}
+.sea.small{width:58%}
+.sea div{aspect-ratio:1;background:#E4F1F7;border-radius:3px;position:relative;min-width:0}
+.sea div.ship{background:#8E9CA6}
+.sea div.ship.sunk,.sea div.sunk.hit{background:#4B5258}
+.sea div.miss::after{content:'';position:absolute;inset:36%;border-radius:50%;background:#fff;box-shadow:0 0 0 1px #9CC3D6}
+.sea div.hit{background:#F6C4BC}
+.sea div.hit::after{content:'';position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle,#FFE07A 0 25%,#E2412F 55%,#B02A1C 100%)}
+.sea div.last{outline:2px solid var(--accent);outline-offset:-1px}
