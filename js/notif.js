@@ -9,6 +9,7 @@
     { k: 'agenda', l: 'Agenda et rappels', ok: true },
     { k: 'qdj', l: 'Question et devinette du jour', ok: true },
     { k: 'dragon', l: 'Dragon (quand il a besoin de vous)', ok: true },
+    { k: 'jeux', l: 'Jeux et défis', ok: true },
     { k: 'arrivees', l: 'Arrivées et départs', ok: false }
   ];
   const supported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;

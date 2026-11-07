@@ -402,3 +402,62 @@ input[type=date].input{padding:0 12px}
 .composer{flex-wrap:wrap}
 .msg.flash .bubble{animation:flash 1.2s ease}
 @keyframes flash{0%,40%{box-shadow:0 0 0 4px var(--accent-soft)}100%{box-shadow:0 0 0 0 transparent}}
+
+/* Défis et parties (échecs) */
+body.in-partie main > .screen{display:none !important}
+.partie-view{display:flex;flex-direction:column;gap:8px;padding-top:6px}
+.df-card{display:flex;flex-direction:column;gap:2px}
+.df-kick{font-family:'Fredoka',sans-serif;font-size:.75em;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.df-line{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line);text-align:left;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit}
+.df-line:first-of-type{border-top:0}
+.df-line .grow{flex:1;min-width:0;display:flex;flex-direction:column}
+.df-sub,.df-line .muted{font-size:.8em}
+.df-ico{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;font-size:1.35em;flex:none}
+.df-tag{font-size:.72em;font-weight:800;border-radius:999px;padding:3px 9px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.df-tag.on{background:var(--accent);color:var(--on-accent)}
+.df-btns{display:flex;gap:8px;margin-top:8px}
+.df-btns button{flex:1}
+.df-launch{margin-top:10px}
+.df-score{font-size:.8em;color:var(--muted);margin-top:10px}
+.df-games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.df-game{border:1.5px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 4px;font-weight:800;font-size:.8em;position:relative;color:var(--text)}
+.df-game b{display:block;font-size:1.6em;margin-bottom:2px}
+.df-game.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.df-game:disabled{opacity:.55}
+.df-game i{position:absolute;top:4px;right:4px;font-style:normal;font-size:.68em;background:var(--line);color:var(--muted);border-radius:6px;padding:1px 5px}
+.df-chips{display:flex;gap:8px;flex-wrap:wrap}
+.df-chip{display:flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px;background:var(--surface);color:var(--text);font-weight:700;font-size:.88em;min-height:44px}
+.df-chip.on{border-color:var(--accent);background:var(--accent-soft)}
+.df-chip:disabled{opacity:.45}
+.df-top{display:flex;align-items:center;justify-content:space-between}
+.df-player{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:14px;border:1.5px solid transparent}
+.df-player .grow{flex:1;min-width:0}
+.df-player.turn{border-color:var(--accent);background:var(--accent-soft)}
+.df-dot{width:12px;height:12px;border-radius:50%;border:1.5px solid #2B2320;flex:none}
+.df-dot.w{background:#fff}.df-dot.b{background:#2B2320}
+.df-cap{display:flex;flex-wrap:wrap;min-height:20px}
+.df-cap .pz{position:static;width:20px;height:20px;margin-right:-5px;filter:none}
+.df-frame{padding:10px;border-radius:18px;background:linear-gradient(145deg,#9C6446,#6E3F2A);box-shadow:0 8px 20px rgba(80,40,20,.25),inset 0 1px 0 rgba(255,255,255,.25)}
+.df-board{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));width:100%;aspect-ratio:1;border-radius:6px;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.df-board .sq{position:relative;overflow:hidden;min-width:0;min-height:0}
+.df-board .sq.l{background:linear-gradient(135deg,#F6E7D2,#EED9BF)}
+.df-board .sq.d{background:linear-gradient(135deg,#C9906A,#B97E58)}
+.df-board .sq.last.l{background:#F2D79A}.df-board .sq.last.d{background:#D6A85F}
+.df-board .sq.sel{box-shadow:inset 0 0 0 3px var(--accent)}
+.df-board .sq.chk{background:radial-gradient(circle,#ff6b5a 0%,#e2412f 45%,transparent 75%)}
+.df-board .sq .dot{position:absolute;display:block;margin:0;left:36%;top:36%;width:28%;height:28%;border-radius:50%;background:rgba(60,30,20,.3);z-index:2}
+.df-board .sq .ring{position:absolute;inset:5%;border-radius:50%;border:4px solid rgba(60,30,20,.3);z-index:2}
+.df-board .coord{position:absolute;font-size:9px;font-weight:800;opacity:.55;z-index:3;color:#3A2A22}
+.df-board .coord.f{right:3px;bottom:2px}.df-board .coord.r{left:3px;top:2px}
+.pz{position:absolute;left:6%;top:6%;width:88%;height:88%;z-index:1;filter:drop-shadow(0 1.5px 1.5px rgba(0,0,0,.28));transition:transform .12s}
+.df-board .sq.sel .pz{transform:translateY(-4%) scale(1.06)}
+.pz.w{fill:#FFFBF5;stroke:#3A2A22;stroke-width:3.2;stroke-linejoin:round}
+.pz.b{fill:#2B2320;stroke:#140d0a;stroke-width:3.2;stroke-linejoin:round}
+.pz .ln{fill:none}.pz.b .ln{stroke:#9a8a80;stroke-width:2.4}
+.pz.w .eye{fill:#3A2A22;stroke:none}.pz.b .eye{fill:#e8dcd2;stroke:none}
+.df-status{text-align:center;font-weight:800;min-height:1.4em}
+.df-status.fin{color:var(--accent);font-family:'Fredoka',sans-serif;font-size:1.15em}
+.df-nulle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;background:var(--accent-soft);border-radius:14px;padding:8px;font-weight:700;font-size:.9em}
+.df-moves{font-size:.8em;color:var(--muted);max-height:3.4em;overflow:auto}
+.df-promo{display:flex;gap:10px;justify-content:center}
+.df-promo button{width:68px;height:68px;border-radius:14px;border:1.5px solid var(--line);background:#F6E7D2;position:relative}
