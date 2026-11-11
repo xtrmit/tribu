@@ -10,7 +10,7 @@ const CACHE = PREFIX + self.TRIBU_VERSION;
 const LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(self.location.hostname) || !/github\.io$/.test(self.location.hostname);
 
 const ASSETS = [
-  './', 'index.html', 'css/app.css', 'js/app.js', 'js/sync.js', 'js/qr.js', 'js/chat.js', 'js/notif.js', 'js/agenda.js', 'js/frigo.js', 'js/carte.js', 'js/jeux-data.js', 'js/jeux.js', 'js/profil.js', 'js/dragon.js', 'js/echecs.js', 'js/defis.js', 'js/jeux2.js', 'js/jeux3.js', 'dragon/vignette.jpg', 'dragon/vignette-oeuf.jpg', 'dragon/lettre.jpg', 'icons/badge-96.png', 'version.js',
+  './', 'index.html', 'css/app.css', 'js/app.js', 'js/sync.js', 'js/qr.js', 'js/chat.js', 'js/notif.js', 'js/agenda.js', 'js/frigo.js', 'js/carte.js', 'js/jeux-data.js', 'js/jeux.js', 'js/profil.js', 'js/dragon.js', 'js/echecs.js', 'js/defis.js', 'js/jeux2.js', 'js/jeux3.js', 'js/urgence.js', 'icons/arrive-96.png', 'dragon/vignette.jpg', 'dragon/vignette-oeuf.jpg', 'dragon/lettre.jpg', 'icons/badge-96.png', 'version.js',
   'manifest.webmanifest', 'manifest-test.webmanifest',
   'fonts/fredoka-latin-500-normal.woff2', 'fonts/fredoka-latin-600-normal.woff2',
   'fonts/nunito-latin-400-normal.woff2', 'fonts/nunito-latin-600-normal.woff2',
@@ -91,11 +91,25 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data && e.data.text() }; }
+  const icon = /\/tribu\/$/.test(self.registration.scope) ? 'icons/icon-192.png' : 'icons/test-icon-192.png';
+  // Bip d'urgence : notification prioritaire répétée 3 fois (vibration longue), même si Tribu est ouverte.
+  if (d.tag === 'tribu-bip') {
+    const attente = ms => new Promise(r => setTimeout(r, ms));
+    const montrer = () => self.registration.showNotification(d.title || '🔔 Bip d\'urgence', {
+      body: d.body || '', icon, badge: 'icons/badge-96.png', tag: 'tribu-bip', renotify: true, requireInteraction: true,
+      vibrate: [600, 200, 600, 200, 600, 200, 600], data: { tab: 'today', bip: true }
+    });
+    e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      list.forEach(c => c.postMessage({ type: 'bip' }));
+      return montrer().then(() => attente(7000)).then(montrer).then(() => attente(7000)).then(montrer);
+    }));
+    return;
+  }
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
     // Tribu déjà ouverte et au premier plan : pas de notification, l'écran se met à jour tout seul.
     if (list.some(c => c.visibilityState === 'visible' && c.focused)) return;
     return self.registration.showNotification(d.title || 'Tribu', {
-      body: d.body || '', icon: /\/tribu\/$/.test(self.registration.scope) ? 'icons/icon-192.png' : 'icons/test-icon-192.png', badge: 'icons/badge-96.png',
+      body: d.body || '', icon, badge: 'icons/badge-96.png',
       tag: d.tag || 'tribu', renotify: true, vibrate: [80, 40, 80], data: { tab: d.tab || 'today' }
     });
   }));
@@ -105,7 +119,8 @@ self.addEventListener('notificationclick', e => {
   e.notification.close();
   const tab = (e.notification.data && e.notification.data.tab) || 'today';
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-    for (const c of list) { c.postMessage({ type: 'open-tab', tab }); return c.focus(); }
+    const bip = e.notification.data && e.notification.data.bip;
+    for (const c of list) { c.postMessage({ type: 'open-tab', tab }); if (bip) c.postMessage({ type: 'bip' }); return c.focus(); }
     return self.clients.openWindow('./#' + tab);
   }));
 });

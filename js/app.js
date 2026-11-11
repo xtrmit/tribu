@@ -86,7 +86,8 @@ async function renderTribe() {
     else if (!t) st = 'Pas encore connecté·e';
     else if (enLigne) st = '<i class="dot"></i>Dans Tribu en ce moment';
     else st = 'Vu·e ' + ago(t);
-    return `<div class="card m-${id}" data-go-map><span class="av">${MEMBRES[id].ini}</span><span class="who"><b>${MEMBRES[id].nom}</b><span>${st}</span></span></div>`;
+    const bip = id !== me() ? `<button class="bip-btn" data-bip="${id}" aria-label="Bip d'urgence pour ${esc(MEMBRES[id].nom)}">🔔</button>` : '';
+    return `<div class="card m-${id}" data-go-map><span class="av">${MEMBRES[id].ini}</span><span class="who"><b>${MEMBRES[id].nom}</b><span>${st}</span></span>${bip}</div>`;
   }).join('');
 }
 function renderMe() {
@@ -136,6 +137,7 @@ function settingsSheet() {
     ${m ? '<div class="field"><span class="label">Notifications</span><div class="notif" id="notifBox"></div></div>' : ''}
     <div class="field"><span class="label">Thème</span>${seg('theme', [['auto', 'Auto'], ['clair', 'Clair'], ['sombre', 'Sombre']], S.theme)}</div>
     <div class="field"><span class="label">Taille du texte</span>${seg('fs', [[0, 'A', 'font-size:14px'], [1, 'A', 'font-size:17px'], [2, 'A', 'font-size:21px']], S.fs)}</div>
+    ${m ? '<button class="ghost" data-act="raccourci">📍 Raccourci « Je suis arrivé »</button>' : ''}
     <button class="ghost" data-act="upd">Rechercher une mise à jour</button>
     <p class="muted center" id="updInfo">Tribu v${VERSION}${ENV !== 'prod' ? ' · ' + ENV.toUpperCase() : ''}</p>
     ${m ? '<button class="ghost danger" data-act="leave">Quitter la tribu sur ce téléphone</button>' : ''}
@@ -145,6 +147,7 @@ function settingsSheet() {
     else if (b.dataset.fs != null) { S.fs = +b.dataset.fs; save(); applyLook(); mark(b); }
     else if (b.dataset.act === 'upd') checkUpdate($('updInfo'));
     else if (b.dataset.act === 'invite') inviteSheet();
+    else if (b.dataset.act === 'raccourci' && window.TribuUrgence) TribuUrgence.raccourci();
     else if (b.dataset.act === 'photo') TribuProfil.editer();
     else if (b.dataset.act === 'nophoto') { TribuProfil.retirer(); closeSheet(); }
     else if (b.dataset.act === 'leave') {

@@ -78,7 +78,7 @@
     E.last = {}; E.perso = {};
     for (const s of soins) { E.last[s.a] = s.t; (E.perso[s.m] = E.perso[s.m] || {})[s.a] = s.t; }
     const lav = Math.max(E.last.laver || 0, E.ne);
-    E.proprete = Math.max(0, Math.min(100, Math.round(100 - 4 * heuresJour(lav, now) - 10 * soins.filter(s => s.a === 'jouer' && s.t > lav).length)));
+    E.proprete = Math.max(0, Math.min(100, Math.round(100 - 4 * heuresJour(lav, now) - 10 * soins.filter(s => s.a === 'jouer' && s.t > lav).length - 6 * soins.filter(s => s.a === 'sortir' && s.t > lav).length)));
     const tendresse = soins.filter(s => (s.a === 'calin' || s.a === 'jouer') && s.t > now - 24 * H).length;
     const hier = veille(now);
     const hierMauvais = hier > E.ne && !enVac(hier + 12 * H) && score(hier) < 0.5;
@@ -86,20 +86,27 @@
     // humeur
     const h = hdec(now), soigneAuj = compte('soigner', j0, j0 + 24 * H);
     const depuisSortie = heuresJour(Math.max(E.last.sortir || 0, E.ne, j0 + 7 * H), now);
-    if (E.nuit) E.humeur = 'endormi';
-    else if (hierMauvais && !soigneAuj) E.humeur = 'malade';
-    else if (((h >= 12 && E.repas < 1) || (h >= 19 && E.repas < 2)) && heuresJour(Math.max(E.last.manger || 0, E.ne), now) >= 3) E.humeur = 'affame';
-    else if (E.sorties < 4 && depuisSortie >= 4) E.humeur = 'besoin';
-    else if (E.proprete < 35) E.humeur = 'sale';
-    else E.humeur = 'content';
+    // Besoins (v0.15, plus expressif) : affamé dès 3 h de journée sans repas, besoin de sortir dès 3 h, sale sous 50 %,
+    // malade si la veille s'est mal passée ou s'il est resté affamé et sale longtemps (6 h de plus) sans soin.
+    const sansManger = heuresJour(Math.max(E.last.manger || 0, E.ne), now);
+    const soigneRecemment = (E.last.soigner || 0) > now - 4 * H;
+    const besoins = [];
+    if (!E.nuit) {
+      if ((hierMauvais && !soigneAuj) || (sansManger >= 9 && E.proprete < 50 && !soigneRecemment)) besoins.push('malade');
+      if (E.repas < 2 && sansManger >= 3) besoins.push('affame');
+      if (E.sorties < 4 && depuisSortie >= 3) besoins.push('besoin');
+      if (E.proprete < 50) besoins.push('sale');
+    }
+    E.besoins = besoins;
+    E.humeur = E.nuit ? 'endormi' : besoins[0] || 'content';
     return E;
   }
 
   function dispo(E, k) { // '' si possible, sinon quand
     const r = RG[k], now = E.now;
     if (r.perso) { const l = (E.perso[me()] || {})[k]; return l && now - l < r.perso * H ? 'à ' + hm(l + r.perso * H) : ''; }
-    if (k === 'laver' && E.humeur === 'sale') return '';
-    if (k === 'soigner' && E.humeur === 'malade') return '';
+    if (k === 'laver' && (E.besoins || []).indexOf('sale') >= 0) return '';
+    if (k === 'soigner' && (E.besoins || []).indexOf('malade') >= 0) return '';
     const nb = { manger: E.repas, sortir: E.sorties, soigner: E.soins }[k];
     if (r.max && nb >= r.max) return 'demain';
     const l = E.last[k]; if (l && now - l < r.ecart * H) return 'vers ' + hm(l + r.ecart * H);
@@ -209,7 +216,7 @@
     let titre, txt, img;
     if (E.stade === 'oeuf') { titre = 'L\'œuf de la tribu'; txt = E.dejaChauffe.length + ' / 4 l\'ont réchauffé' + (E.chauffeurs[me()] ? '' : ' · et toi ?'); img = 'vignette-oeuf'; }
     else if (E.parti) { titre = E.nom || 'Le dragon'; txt = 'Il est parti… une lettre vous attend'; img = 'vignette'; }
-    else { titre = E.nom || 'Bébé dragon'; const [emo, l] = HUMEUR[E.humeur]; txt = emo + ' ' + l + (['content', 'endormi'].indexOf(E.humeur) < 0 ? ' · il a besoin de vous' : ''); img = 'vignette'; }
+    else { titre = E.nom || 'Bébé dragon'; const [emo, l] = HUMEUR[E.humeur]; const autres = (E.besoins || []).slice(1).map(x => ({ affame: 'il a faim', besoin: 'il veut sortir', sale: 'il est sale', malade: 'il est malade' })[x]); txt = emo + ' ' + l + (autres.length ? ' · et ' + autres.join(', ') : '') + (['content', 'endormi'].indexOf(E.humeur) < 0 ? ' · il a besoin de vous' : ''); img = 'vignette'; }
     el.innerHTML = `<button class="card dg-tile" data-go="dragon"><img src="${DIR}${img}.jpg" alt=""><span><b>${esc(titre)}</b><span>${esc(txt)} →</span></span></button>`;
   }
   function onglet() {

@@ -547,3 +547,59 @@ body.in-partie main > .screen{display:none !important}
 .pe-kb button.ko{background:var(--accent-soft);border-color:#F2B4A8;color:#B03A2E;text-decoration:line-through}
 .pe-kb button small{display:block;font-size:.55em;font-weight:700;opacity:.8}
 .partie-view .primary:disabled{opacity:.45}
+/* v0.15 : Puissance 4 rouge/bleu, Yams dés gardés et aide, pendu chacun son tour */
+.p4{background:linear-gradient(160deg,#4A6FB5,#2D4A86);box-shadow:0 8px 20px rgba(30,40,90,.3),inset 0 1px 0 rgba(255,255,255,.3)}
+.p4-arrows span{color:#2D4A86}
+.p4-cell i.rouge,.j-disc.rouge{background:radial-gradient(circle at 35% 30%,#FF9C8F,#E2412F 55%,#A8261A)}
+.p4-cell i.bleu,.j-disc.bleu{background:radial-gradient(circle at 35% 30%,#9CC4FF,#2F6FDB 55%,#1B4796)}
+.p4-cell i{z-index:2}
+.p4-cell i.drop{animation:p4chute var(--dur,.4s) cubic-bezier(.45,0,.9,.6) both}
+@keyframes p4chute{0%{transform:translateY(var(--from))}80%{transform:translateY(0)}88%{transform:translateY(-12%)}100%{transform:translateY(0)}}
+.ya-zone{border-radius:14px;padding:8px}
+.ya-zone h4{margin:0 0 6px;font-size:.72em;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ya-zone.k{background:#F1FAF3;border:1.5px dashed #9ED8AE}
+.ya-zone.r{background:var(--surface);border:1.5px dashed var(--line)}
+.ya-zone .ya-dice{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin:0;min-height:50px;align-items:center}
+.j-die.keep{border-color:#2D9A55;background:#E6F6EA;box-shadow:0 0 0 2px #2D9A55;position:relative}
+.j-die.keep::after{content:'🔒';position:absolute;top:-10px;right:-8px;font-size:15px}
+.j-die.held{transform:none}
+.ya-aide-l{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.ya-help{border:0;background:var(--accent);color:var(--on-accent);width:32px;height:32px;border-radius:50%;font-weight:800;flex:none}
+.ya-nom{text-decoration:underline dotted;cursor:pointer}
+.ya-aide{display:flex;flex-direction:column;gap:8px}
+.ya-aide > div{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;font-size:.85em;border-bottom:1px solid var(--line);padding-bottom:6px}
+.ya-aide b{font-family:'Fredoka',sans-serif;color:var(--accent)}
+.ya-ex{font-size:1.35em;letter-spacing:1px}
+.pe-mot{display:flex;gap:8px;align-items:center}
+.pe-mot .input{flex:1}
+:root[data-theme="sombre"] .ya-zone.k{background:#1F3326}
+@media (prefers-color-scheme:dark){:root:not([data-theme="clair"]) .ya-zone.k{background:#1F3326}}
+
+.poll-head{display:flex;align-items:center;justify-content:space-between}
+.poll-head .h3{margin:0}
+.poll-x{border:0;background:var(--accent-soft);color:var(--accent);width:32px;height:32px;border-radius:50%;font-size:1.15em;font-weight:800;flex:none}
+#todayPoll .poll-head{margin-bottom:8px}
+/* v0.15 : bip d'urgence, bandeau de localisation, « Je suis arrivé » */
+.tribe .card{position:relative}
+.bip-btn{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;border:1.5px solid #F2B4A8;background:#FFF1EE;font-size:1em;line-height:1;padding:0}
+:root[data-theme="sombre"] .bip-btn{background:#3E2724;border-color:#7A3A30}
+@media (prefers-color-scheme:dark){:root:not([data-theme="clair"]) .bip-btn{background:#3E2724;border-color:#7A3A30}}
+.lien-btn{display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--text);text-align:center;padding:0 12px}
+.alarme{position:fixed;inset:0;z-index:200;background:radial-gradient(circle,#E2412F,#8E1F14);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px}
+.alarme[hidden]{display:none}
+.alarme h2{font-family:'Fredoka',sans-serif;font-size:1.7em;margin:0}
+.alarme p,.alarme small{margin:0;opacity:.9}
+.alarme-cloche{font-size:5em;animation:clochette .4s infinite}
+@keyframes clochette{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+.alarme-ok{background:#fff;color:#B03A2E;border:0;border-radius:18px;min-height:60px;padding:0 34px;font-weight:800;font-size:1.15em}
+.geo-banner{display:flex;align-items:center;gap:10px;background:#FFF1EE;border:1.5px solid #F2B4A8;color:#8E2A1E;border-radius:14px;padding:10px 12px;font-size:.85em;font-weight:700}
+.geo-banner span{flex:1}
+:root[data-theme="sombre"] .geo-banner{background:#3E2724;color:#FFC8BE;border-color:#7A3A30}
+@media (prefers-color-scheme:dark){:root:not([data-theme="clair"]) .geo-banner{background:#3E2724;color:#FFC8BE;border-color:#7A3A30}}
+.arrive-ok{position:fixed;inset:0;z-index:150;background:rgba(43,35,32,.45);display:flex;align-items:center;justify-content:center;padding:24px}
+.arrive-ok[hidden]{display:none}
+.arrive-ok-in{background:var(--surface);border-radius:24px;padding:24px;text-align:center;display:flex;flex-direction:column;gap:10px;max-width:340px;width:100%}
+.arrive-ok-in h2{font-family:'Fredoka',sans-serif;margin:0}
+.arrive-ok-in p{margin:0;color:var(--muted)}
+.arrive-ok-ico{font-size:3.5em}
+.guide{margin:0;padding-left:20px;font-size:.88em;line-height:1.45;display:flex;flex-direction:column;gap:6px}

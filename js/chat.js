@@ -74,7 +74,7 @@
       if (dl !== lastDay) { html += `<div class="day">${dl}</div>`; lastDay = dl; lastAuthor = ''; }
       if (it.type === 'poll') { html += pollHtml(it.e); lastAuthor = ''; continue; }
       const m = it.e, mine = m.auteur === me(), a = memb(m.auteur);
-      if (m.data.sys === 'jeu') { html += `<div class="sysmsg m-${esc(m.auteur)}">${esc(m.data.t)} · ${hhmm(it.t)}</div>`; lastAuthor = ''; continue; }
+      if (m.data.sys === 'jeu' || m.data.sys === 'bip') { html += `<div class="sysmsg m-${esc(m.auteur)}">${esc(m.data.t)} · ${hhmm(it.t)}</div>`; lastAuthor = ''; continue; }
       if (m.data.sys) { html += `<div class="sysmsg m-${esc(m.auteur)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0114 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>${esc(m.data.t)} · ${hhmm(it.t)}</div>`; lastAuthor = ''; continue; }
       const grouped = m.auteur === lastAuthor && it.t - lastT < 5 * 60 * 1000;
       lastAuthor = m.auteur; lastT = it.t;
@@ -104,8 +104,10 @@
 
   /* ---------- Aujourd'hui : dernier sondage + derniers messages ---------- */
   function renderToday() {
-    const lp = data.polls.slice().sort((a, b) => at(b) - at(a))[0];
-    $('todayPoll').innerHTML = lp ? `<h2 class="h3">Dernier sondage</h2>${pollHtml(lp)}` : '';
+    // Le sondage le plus récent que je n'ai pas masqué de mon accueil (× : masqué pour moi seulement, il reste dans le chat).
+    const masques = S.sondagesMasques || [];
+    const lp = data.polls.filter(p => masques.indexOf(p.uid) < 0).sort((a, b) => at(b) - at(a))[0];
+    $('todayPoll').innerHTML = lp ? `<div class="poll-head"><h2 class="h3">Sondage</h2><button class="poll-x" data-masquer="${esc(lp.uid)}" aria-label="Masquer ce sondage de mon accueil">×</button></div>${pollHtml(lp)}` : '';
     const last = data.msgs.slice().sort((a, b) => at(a) - at(b)).slice(-2);
     $('todayMsgs').innerHTML = last.length ? `<h2 class="h3">Derniers messages</h2>
       <button class="card lastmsgs" data-go="chat">${last.map(m => `<span class="row"><span class="av sm m-${esc(m.auteur)}">${memb(m.auteur).ini}</span><span class="ell">${m.data.sys ? '' : esc(memb(m.auteur).nom) + ' : '}${m.data.photo ? 'Photo' + (m.data.t ? ' · ' : '') : ''}${esc(m.data.t || '')}</span></span>`).join('')}
@@ -331,6 +333,13 @@
 
   // Clics dans le fil et sur l'écran Aujourd'hui (sondage, derniers messages)
   function onClick(e) {
+    const mq = e.target.closest('[data-masquer]');
+    if (mq) {
+      const u = mq.dataset.masquer;
+      S.sondagesMasques = (S.sondagesMasques || []).concat(u).slice(-50); save(); renderToday();
+      toast('Sondage masqué de ton accueil (il reste dans le chat)', () => { S.sondagesMasques = (S.sondagesMasques || []).filter(x => x !== u); save(); renderToday(); });
+      return;
+    }
     if (swallow) { swallow = false; return; }
     const q = e.target.closest('[data-goto]');
     if (q) { goTo(q.dataset.goto); return; }

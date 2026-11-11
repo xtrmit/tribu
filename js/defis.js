@@ -299,6 +299,7 @@
     if (p.data.fin || finis.has(p.uid)) return;
     finis.add(p.uid);
     const f = { type: fin.type, t: Date.now() };
+    if (fin.par) f.par = fin.par;
     if (fin.gagnants) f.gagnants = fin.gagnants; else f.gagnant = fin.gagnant || null;
     await Sync.put('partie', p.uid, Object.assign({}, p.data, { nulle: null, fin: f }));
     const G = JEUX[p.data.jeu], gs = gagnantsDe(f), js = joueursDe(p.data), aux = auxJeu(p.data.jeu);

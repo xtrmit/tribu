@@ -1,5 +1,5 @@
 /* Tribu — jeux à plusieurs : petits chevaux (2 à 4), Yams (2 à 4), pendu de la tribu (un maître du mot, une équipe qui devine).
-   Coups : petits chevaux { qui, d (dé), h (cheval, -1 si aucun) } ; Yams { qui, des [5], cat } ; pendu { qui, l (lettre) }.
+   Coups : petits chevaux { qui, d (dé), h (cheval, -1 si aucun) } ; Yams { qui, des [5], cat } ; pendu, chacun son tour : { qui, l (lettre) } ou { qui, mot }.
    Le dé et les lancers en cours sont gardés sur le téléphone (localStorage) jusqu'à ce que le coup soit joué. */
 (function () {
   'use strict';
@@ -146,36 +146,57 @@
     statut(e, c) {
       if (e.fin || !c.aMoi) return;
       const t = lsGet(c.cle), l = t && t.n === e.cs.length ? t.lancers : 0;
-      return l === 0 ? 'À toi : lance les dés' : l < 3 ? 'Touche les dés à garder et relance, ou note un score' : 'Choisis une case à remplir';
+      return l === 0 ? 'À toi : lance les dés' : l < 3 ? 'Touche les dés à garder, puis relance (ou note un score)' : 'Choisis une case à remplir';
     },
     vue(e, c) {
       let t = c.aMoi ? lsGet(c.cle) : null;
       if (!t || t.n !== e.cs.length) t = { n: e.cs.length, des: [0, 0, 0, 0, 0], gard: [false, false, false, false, false], lancers: 0 };
       const js = c.joueurs, moiIdx = js.indexOf(c.moi);
-      const rows = CAT.map(([k, l], ix) => `${ix === 6 ? `<tr class="ya-sep"><td>Bonus (63 en haut : +35)</td>${js.map(m => `<td>${haut(e.f[m]) >= 63 ? 35 : haut(e.f[m]) + '/63'}</td>`).join('')}</tr>` : ''}<tr><td>${l}</td>${js.map((m, i) => {
+      const rel = t.gard.filter(g => !g).length;
+      const rows = CAT.map(([k, l], ix) => `${ix === 6 ? `<tr class="ya-sep"><td>Bonus (63 en haut : +35)</td>${js.map(m => `<td>${haut(e.f[m]) >= 63 ? 35 : haut(e.f[m]) + '/63'}</td>`).join('')}</tr>` : ''}<tr><td class="ya-nom" data-a="${k}">${l}</td>${js.map((m, i) => {
         const v = e.f[m][k], can = c.aMoi && i === moiIdx && v === undefined && t.lancers > 0;
         return `<td class="${i === moiIdx ? 'me' : ''}${can ? ' can' : ''}" ${can ? `data-k="${k}"` : ''}>${v !== undefined ? v : can ? points(k, t.des) : ''}</td>`;
       }).join('')}</tr>`).join('');
-      return `${c.aMoi ? `<div class="ya-dice">${t.des.map((v, i) => de(v, t.gard[i] ? 'held' : '', `data-g="${i}"`)).join('')}</div>
-        <button class="primary" data-act="ya-lancer" ${t.lancers >= 3 ? 'disabled' : ''}>${t.lancers === 0 ? 'Lancer les dés' : 'Relancer (' + (3 - t.lancers) + ')'}</button>` : ''}
+      const zones = c.aMoi ? `<div class="ya-zone k"><h4>🔒 Gardés</h4><div class="ya-dice">${t.des.map((v, i) => (t.gard[i] && t.lancers ? de(v, 'keep', `data-g="${i}"`) : '')).join('') || `<span class="muted df-sub">${t.lancers ? 'Touche un dé pour le garder' : 'Lance d\'abord les dés'}</span>`}</div></div>
+        <div class="ya-zone r"><h4>🎲 À relancer</h4><div class="ya-dice">${t.des.map((v, i) => (!(t.gard[i] && t.lancers) ? de(t.lancers ? v : 0, '', `data-g="${i}"`) : '')).join('') || '<span class="muted df-sub">Tous les dés sont gardés</span>'}</div></div>
+        <button class="primary" data-act="ya-lancer" ${t.lancers >= 3 || (t.lancers && !rel) ? 'disabled' : ''}>${t.lancers === 0 ? 'Lancer les 5 dés' : t.lancers >= 3 ? 'Plus de lancer : choisis une case' : 'Relancer ' + rel + ' dé' + (rel > 1 ? 's' : '') + ' (' + (3 - t.lancers) + ' restant' + (3 - t.lancers > 1 ? 's' : '') + ')'}</button>` : '';
+      return `${zones}<div class="ya-aide-l"><span class="muted df-sub">${c.aMoi && t.lancers ? 'Touche une case orange pour noter ton score.' : 'Touche le nom d\'une case pour son explication.'}</span><button class="ya-help" data-act="ya-aide" aria-label="Aide du Yams">?</button></div>
         <div class="ya-wrap"><table class="ya-sheet"><tr><th></th>${js.map(m => `<th class="m-${esc(m)}">${esc(c.nom(m))}</th>`).join('')}</tr>${rows}<tr class="ya-sep"><td>Total</td>${js.map(m => `<td>${totalY(e.f[m])}</td>`).join('')}</tr></table></div>`;
     },
     clic(ev, e, c) {
+      const aide = ev.target.closest('[data-act="ya-aide"]'), nom = ev.target.closest('[data-a]');
+      if (aide || nom) { aideYams(nom ? nom.dataset.a : null); return; }
       if (!c.aMoi) return;
       let t = lsGet(c.cle); if (!t || t.n !== e.cs.length) t = { n: e.cs.length, des: [0, 0, 0, 0, 0], gard: [false, false, false, false, false], lancers: 0 };
       const a = ev.target.closest('[data-act="ya-lancer"]');
-      if (a) { if (t.lancers >= 3) return; t.des = t.des.map((v, i) => (t.gard[i] && t.lancers ? v : rnd())); t.lancers++; lsSet(c.cle, t); vib(10); c.rendre(); return; }
+      if (a) {
+        if (t.lancers >= 3) return;
+        if (!t.lancers) t.gard = [false, false, false, false, false];
+        t.des = t.des.map((v, i) => (t.gard[i] ? v : rnd())); t.lancers++; lsSet(c.cle, t); vib(10); c.rendre();
+        document.querySelectorAll('.ya-zone.r .j-die').forEach(x => x.classList.add('roll'));
+        return;
+      }
       const g = ev.target.closest('[data-g]');
-      if (g) { if (!t.lancers || t.lancers >= 3) return; t.gard[+g.dataset.g] = !t.gard[+g.dataset.g]; lsSet(c.cle, t); c.rendre(); return; }
+      if (g) { if (!t.lancers || t.lancers >= 3) return; t.gard[+g.dataset.g] = !t.gard[+g.dataset.g]; lsSet(c.cle, t); vib(6); c.rendre(); return; }
       const k = ev.target.closest('[data-k]');
       if (k && t.lancers) {
-        const cat = k.dataset.k, pts = points(cat, t.des), nom = CAT.find(x => x[0] === cat)[1];
+        const cat = k.dataset.k, pts = points(cat, t.des), nomC = CAT.find(x => x[0] === cat)[1];
         lsSet(c.cle, null);
-        let next = suivant(e.d, c.moi);
-        c.jouer({ qui: c.moi, des: t.des, cat }, { txt: 'a marqué ' + pts + ' en ' + nom, pour: next });
+        c.jouer({ qui: c.moi, des: t.des, cat }, { txt: 'a marqué ' + pts + ' en ' + nomC, pour: suivant(e.d, c.moi) });
       }
     }
   });
+  const AIDE = {
+    1: ['Total des 1', '⚀⚀⚂⚃⚅', 2], 2: ['Total des 2', '⚁⚁⚁⚀⚄', 6], 3: ['Total des 3', '⚂⚂⚀⚃⚅', 6], 4: ['Total des 4', '⚃⚃⚃⚃⚀', 16], 5: ['Total des 5', '⚄⚄⚀⚁⚂', 10], 6: ['Total des 6', '⚅⚅⚅⚀⚁', 18],
+    brelan: ['3 dés identiques : total des 5 dés', '⚃⚃⚃⚀⚅', 19], carre: ['4 dés identiques : total des 5 dés', '⚄⚄⚄⚄⚁', 22], full: ['3 dés identiques + 2 dés identiques', '⚂⚂⚂⚄⚄', 25],
+    petite: ['4 dés qui se suivent', '⚀⚁⚂⚃⚅', 30], grande: ['5 dés qui se suivent', '⚁⚂⚃⚄⚅', 40], yams: ['5 dés identiques', '⚅⚅⚅⚅⚅', 50], chance: ['N\'importe quels dés : total des 5', '⚀⚂⚃⚅⚅', 21]
+  };
+  function aideYams(k) {
+    const liste = k ? CAT.filter(x => x[0] === k) : CAT;
+    openSheet(k ? liste[0][1] : 'Les cases du Yams', `<div class="ya-aide">${liste.map(([key, nom]) => { const a = AIDE[key]; return `<div><b>${nom}</b><span>${a[0]}<br><span class="ya-ex">${a[1]}</span> = <b>${a[2]} pts</b></span></div>`; }).join('')}
+      ${k ? '' : '<div><b>Bonus</b><span>63 points ou plus dans les cases As à Six : +35</span></div><div><b>0 point</b><span>On peut remplir une case sans avoir la combinaison : elle vaut alors 0</span></div><div><b>Le tour</b><span>3 lancers au plus : on garde les dés qu\'on veut entre deux lancers, puis on remplit une case</span></div>'}</div>
+      <button class="primary" data-x="ok">Compris</button>`, ev => { if (ev.target.closest('[data-x]')) closeSheet(); });
+  }
 
   /* ================== Pendu de la tribu ================== */
   const MAX = 7;
@@ -193,39 +214,62 @@
     },
     etat(d, cs) {
       const mot = String((d.opts && d.opts.mot) || '').trim(), M = norm(mot);
-      const prop = []; cs.forEach(c => { if (c.l && /^[A-Z]$/.test(c.l) && !prop.some(p => p.l === c.l)) prop.push(c); });
-      const err = prop.filter(p => M.indexOf(p.l) < 0).length;
-      const trouve = [...M].every(ch => !/[A-Z]/.test(ch) || prop.some(p => p.l === ch));
       const maitre = d.joueurs[0], dev = d.joueurs.slice(1);
-      let fin = null;
-      if (mot && trouve) fin = { type: 'trouve', gagnants: dev };
-      else if (err >= MAX) fin = { type: 'pendu', gagnant: maitre };
-      return { mot, M, prop, err, maitre, dev, trait: null, libre: !fin, fin, ncoups: prop.length };
+      const actifs = dev.filter(m => (d.quitte || []).indexOf(m) < 0);
+      const prochain = qui => { const i = dev.indexOf(qui); for (let k = 1; k <= dev.length; k++) { const m = dev[(i + k) % dev.length]; if (actifs.indexOf(m) >= 0) return m; } return null; };
+      const prop = [], essais = [];
+      let err = 0, trait = actifs[0] || null, fin = null, par = null;
+      for (const c of cs) {
+        if (fin || c.qui !== trait) continue;
+        if (c.mot) {
+          if (norm(c.mot) === M) { fin = { type: 'trouve', gagnants: dev, par: c.qui }; par = c.qui; }
+          else { err++; essais.push(c); }
+        } else if (c.l && /^[A-Z]$/.test(c.l) && !prop.some(p => p.l === c.l)) {
+          prop.push(c);
+          if (M.indexOf(c.l) < 0) err++;
+          else if ([...M].every(ch => !/[A-Z]/.test(ch) || prop.some(p => p.l === ch))) { fin = { type: 'trouve', gagnants: dev, par: c.qui }; par = c.qui; }
+        }
+        if (!fin && err >= MAX) fin = { type: 'pendu', gagnant: maitre };
+        if (!fin) trait = prochain(c.qui);
+      }
+      if (!mot) fin = null;
+      return { mot, M, prop, essais, err, maitre, dev, trait: fin ? null : trait, fin, par, ncoups: prop.length + essais.length };
     },
     chip(e, m) { return m === e.maitre ? 'maître du mot' : 'devine'; },
     statut(e, c) {
       if (e.fin) return;
-      return c.moi === e.maitre ? 'Tu es le maître du mot : regarde la tribu deviner' : c.role ? 'À vous : proposez des lettres, chacun quand il veut' : 'La tribu devine le mot de ' + esc(c.memb(e.maitre).nom);
+      if (c.moi === e.maitre) return 'Tu es le maître du mot · au tour de ' + esc(c.memb(e.trait).nom);
+      return c.aMoi ? 'À toi : une lettre, ou le mot entier' : esc(c.memb(e.trait).nom) + ' choisit une lettre…';
     },
     messageFin(d, f, noms) {
       const mot = String((d.opts && d.opts.mot) || '').toUpperCase(), maitre = d.joueurs[0], dev = d.joueurs.slice(1);
-      if (f.type === 'trouve') return '🏆 ' + noms(dev) + (dev.length > 1 ? ' ont trouvé' : ' a trouvé') + ' le mot de ' + noms([maitre]) + ' au pendu : « ' + mot + ' »';
+      if (f.type === 'trouve') return '🏆 ' + noms(dev) + (dev.length > 1 ? ' ont trouvé' : ' a trouvé') + ' le mot de ' + noms([maitre]) + ' au pendu : « ' + mot + ' »' + (f.par && dev.length > 1 ? ' · 🎯 ' + noms([f.par]) + ' a trouvé' : '');
       if (f.type === 'pendu') return '🏆 ' + noms([maitre]) + ' a pendu ' + noms(dev) + ' : le mot était « ' + mot + ' »';
       return null;
     },
     vue(e, c) {
       const voit = c.moi === e.maitre || !!e.fin;
       const mot = [...e.mot].map(ch => { const n = norm(ch); if (!/[A-Z]/.test(n)) return `<span class="sp">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`; return `<span>${voit || e.prop.some(p => p.l === n) ? esc(ch.toUpperCase()) : ''}</span>`; }).join('');
-      const peut = !!c.role && c.moi !== e.maitre && !e.fin;
+      const essais = e.essais.length ? `<div class="pe-hint">Mots tentés : ${e.essais.map(x => esc(String(x.mot).toUpperCase()) + ' (' + esc(c.memb(x.qui).ini) + ')').join(', ')}</div>` : '';
       return `<svg class="pe-gallows" viewBox="0 0 170 170">${PARTS.slice(0, e.err).join('')}</svg>
         <div class="pe-hint">${e.err}/${MAX} erreurs${e.d.opts && e.d.opts.indice ? ' · Indice : ' + esc(e.d.opts.indice) : ''}</div>
-        <div class="pe-word">${mot}</div>
-        <div class="pe-kb">${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => { const p = e.prop.find(x => x.l === l); const ok = p && e.M.indexOf(l) >= 0; return `<button data-l="${l}" ${p || !peut ? 'disabled' : ''} class="${p ? (ok ? 'ok' : 'ko') : ''}">${l}${p ? `<small>${esc(c.memb(p.qui).ini)}</small>` : ''}</button>`; }).join('')}</div>`;
+        <div class="pe-word">${mot}</div>${essais}
+        <div class="pe-kb">${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => { const p = e.prop.find(x => x.l === l); const ok = p && e.M.indexOf(l) >= 0; return `<button data-l="${l}" ${p || !c.aMoi ? 'disabled' : ''} class="${p ? (ok ? 'ok' : 'ko') : ''}">${l}${p ? `<small>${esc(c.memb(p.qui).ini)}</small>` : ''}</button>`; }).join('')}</div>
+        ${c.aMoi ? '<div class="pe-mot"><input class="input" id="peEssai" maxlength="24" autocomplete="off" placeholder="Proposer le mot entier"><button class="small" data-act="pe-mot">Proposer</button></div>' : ''}`;
     },
     clic(ev, e, c) {
-      const b = ev.target.closest('[data-l]'); if (!b || b.disabled || c.moi === e.maitre) return;
-      const l = b.dataset.l;
-      c.jouer({ qui: c.moi, l }, { uid: 'coup:' + e.p.uid + ':L' + l, n: Date.now(), pour: null, txt: 'a proposé la lettre ' + l });
+      if (!c.aMoi || c.moi === e.maitre) return;
+      const pour = (() => { const dev = e.dev, act = dev.filter(m => (e.d.quitte || []).indexOf(m) < 0), i = dev.indexOf(c.moi); for (let k = 1; k <= dev.length; k++) { const m = dev[(i + k) % dev.length]; if (act.indexOf(m) >= 0) return m; } return null; })();
+      const a = ev.target.closest('[data-act="pe-mot"]');
+      if (a) {
+        const v = ($('peEssai') || {}).value || '';
+        if (!/[A-Za-zÀ-ÿ]/.test(v)) { toast('Écris le mot à proposer'); return; }
+        if (norm(v.trim()) !== e.M) toast('Ce n\'est pas le mot : une erreur');
+        c.jouer({ qui: c.moi, mot: v.trim().slice(0, 24) }, { pour, txt: 'a tenté un mot' });
+        return;
+      }
+      const b = ev.target.closest('[data-l]'); if (!b || b.disabled) return;
+      c.jouer({ qui: c.moi, l: b.dataset.l }, { pour, txt: 'a proposé la lettre ' + b.dataset.l });
     }
   });
 })();

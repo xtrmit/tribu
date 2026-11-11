@@ -36,7 +36,7 @@
       else if (g.every(x => x)) fin = { type: 'plein', gagnant: null };
       return { g, last, gagne, trait: cs.length % 2 ? d.b : d.w, fin, ncoups: cs.length };
     },
-    marque(e, r, c) { return disc(c.qui(r)); },
+    marque(e, r) { return `<span class="j-disc ${r === 'w' ? 'rouge' : 'bleu'}"></span>`; },
     statut(e, c) { if (c.aMoi) return 'À toi : touche une colonne'; },
     vue(e, c) {
       const anim = p4Vu[e.p.uid] !== e.cs.length ? e.last : -1; p4Vu[e.p.uid] = e.cs.length;
@@ -44,7 +44,7 @@
       return `<div class="p4-arrows">${Array.from({ length: W }, (_, col) => `<span class="${c.aMoi && libre(col) ? 'on' : ''}">▼</span>`).join('')}</div>
         <div class="p4"><div class="p4-grid">${e.g.map((v, i) => {
           const r = Math.floor(i / W);
-          return `<div class="p4-cell${e.gagne && e.gagne.cells.indexOf(i) >= 0 ? ' win' : ''}" data-c="${i % W}">${v ? `<i class="m-${esc(v)}${i === anim ? ' drop' : ''}" style="--from:${-(r + 1) * 112}%"></i>` : ''}</div>`;
+          return `<div class="p4-cell${e.gagne && e.gagne.cells.indexOf(i) >= 0 ? ' win' : ''}" data-c="${i % W}">${v ? `<i class="${v === e.d.w ? 'rouge' : 'bleu'}${i === anim ? ' drop' : ''}" style="--from:calc(${-(r + 1)} * (100% + 6px) * 1.14);--dur:${(0.25 + r * 0.07).toFixed(2)}s"></i>` : ''}</div>`;
         }).join('')}</div></div>`;
     },
     clic(ev, e, c) {

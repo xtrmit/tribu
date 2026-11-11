@@ -55,12 +55,54 @@
 
   /* ---------- Envoi de ma position ---------- */
   function geoOn() { return S.geo === 'on' && 'geolocation' in navigator; }
-  // Si le téléphone autorise déjà la position, le partage se rétablit tout seul (après une mise à jour, un effacement…).
-  if (S.geo !== 'on' && 'geolocation' in navigator && navigator.permissions && navigator.permissions.query) {
-    navigator.permissions.query({ name: 'geolocation' }).then(p => {
-      if (p.state === 'granted') { S.geo = 'on'; save(); renderAsk(); setTimeout(() => sendPosition(true), 2000); }
-    }).catch(() => {});
+  // v0.15 : à chaque ouverture de Tribu (et au raccourci « Je suis arrivé »), la position est demandée, sauf en mode discret.
+  // Une appli web ne peut pas rallumer la localisation du téléphone : si elle est coupée, un bandeau le dit sur l'Accueil.
+  function bandeau(msg) {
+    const b = $('geoBanner'); if (!b) return;
+    if (!msg) { b.hidden = true; b.innerHTML = ''; return; }
+    b.hidden = false; b.innerHTML = `<span>${msg}</span><button class="small" data-geo-retry>Réessayer</button>`;
   }
+  function localiser(frais) {
+    return new Promise((ok, ko) => {
+      if (!('geolocation' in navigator)) { ko({ code: 2 }); return; }
+      navigator.geolocation.getCurrentPosition(g => {
+        S.geo = 'on'; save(); bandeau(''); renderAsk();
+        const p = { lat: +g.coords.latitude.toFixed(6), lng: +g.coords.longitude.toFixed(6), acc: Math.round(g.coords.accuracy || 0), t: Date.now(), discret: false };
+        lastSent = Date.now(); Sync.put('pos', 'pos:' + me(), p); ok(p);
+      }, err => {
+        if (err.code === 1) { S.geo = 'refus'; save(); renderAsk(); bandeau('📍 Tribu n\'a pas accès à ta position : autorise-la dans les réglages du téléphone (autorisations de Tribu ou du navigateur).'); }
+        else bandeau('📍 Ta localisation semble coupée : active-la dans les réglages rapides du téléphone pour que la tribu sache où tu es.');
+        ko(err);
+      }, { enableHighAccuracy: true, timeout: 20000, maximumAge: frais ? 0 : 60000 });
+    });
+  }
+  async function auLancement() {
+    if (!me()) return;
+    await load();
+    if (myDiscret()) { bandeau(''); return; }
+    localiser(false).catch(() => {});
+  }
+  document.addEventListener('click', e => { if (e.target.closest('[data-geo-retry]')) { bandeau(''); localiser(true).catch(() => {}); } });
+  // Raccourci « Je suis arrivé » : position fraîche, message de la tribu, confirmation.
+  async function arriver() {
+    if (!me()) return;
+    await load();
+    if (myDiscret()) { toast('Mode discret activé : désactive-le dans Carte pour prévenir la tribu'); return; }
+    toast('📍 Je cherche ta position…');
+    let p;
+    try { p = await localiser(true); } catch (e) { toast('Position introuvable : active la localisation puis réessaie'); return; }
+    const l = nearest(p);
+    const txt = nom(me()) + ' est bien arrivé' + (GENRE[me()] || '') + (l ? ' · ' + l.data.nom : '');
+    await Sync.put('msg', 'msg:' + me() + ':' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), { t: txt, at: Date.now(), sys: true });
+    Sync.sync(); vib(20);
+    let el = $('arriveOk');
+    if (!el) { el = document.createElement('div'); el.id = 'arriveOk'; el.className = 'arrive-ok'; document.body.appendChild(el); }
+    el.innerHTML = `<div class="arrive-ok-in"><div class="arrive-ok-ico">✅</div><h2>La tribu est prévenue</h2><p>${esc(txt)}</p><button class="primary" data-ok>OK</button></div>`;
+    el.hidden = false; el.onclick = ev => { if (ev.target.closest('[data-ok]')) el.hidden = true; };
+  }
+  const viaRaccourci = () => { if (location.hash !== '#arrive') return false; try { history.replaceState(null, '', location.pathname); } catch (e) {} setTimeout(arriver, 600); return true; };
+  if (!viaRaccourci()) setTimeout(auLancement, 1500);
+  window.addEventListener('hashchange', viaRaccourci);
   function sendPosition(force) {
     if (!me() || !geoOn() || myDiscret()) return;
     if (!force && Date.now() - lastSent < EVERY - 5000) return;
@@ -72,7 +114,7 @@
     }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 });
   }
   setInterval(() => { if (document.visibilityState === 'visible') sendPosition(false); }, 30000);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sendPosition(false); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && Date.now() - lastSent > EVERY - 5000) auLancement(); });
 
   /* ---------- Carte ---------- */
   const map = $('map'), tilesEl = $('mapTiles'), marksEl = $('mapMarks');
@@ -343,7 +385,7 @@
   new MutationObserver(() => render()).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   Sync.on(kinds => { if (kinds.some(k => ['pos', 'lieu', 'auth'].indexOf(k) >= 0)) refresh(); });
 
-  window.TribuCarte = { statut };
+  window.TribuCarte = { statut, arriver };
   refresh();
   setTimeout(() => sendPosition(true), 1500);
 })();
