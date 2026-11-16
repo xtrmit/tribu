@@ -33,6 +33,7 @@
   // Un jour raté ne compte pas mais ne remet pas le compteur à zéro ; le dragon ne rétrécit jamais.
   const AGES = [{ k: 'bebe', n: 'Bébé', p: '', vig: 'vignette', def: 'Bébé dragon' }, { k: 'ado', n: 'Ado', p: 'ado-', vig: 'vignette-ado', def: 'Jeune dragon' }, { k: 'adulte', n: 'Adulte', p: 'adulte-', vig: 'vignette-adulte', def: 'Dragon' }];
   const PALIER = 30;
+  const TEST = typeof ENV !== 'undefined' && ENV !== 'prod';
 
   let D = { o: '1', vacs: [] }, soins = [], sondage = null, votes = [];
 
@@ -57,6 +58,7 @@
     const vus = new Set();
     for (const s of soins) if (s.a === 'rechauffer') { vus.add(s.m); if (s.t >= debutJour(now)) E.chauffeurs[s.m] = true; if (!E.ne && ORDRE.length && ORDRE.every(m => vus.has(m))) E.ne = s.t; }
     E.dejaChauffe = [...vus];
+    if (!E.ne && TEST && D.eclos) E.ne = D.eclos; // version de test : éclosion forcée par l'administrateur
     if (!E.ne) return E;
     E.stade = 'bebe';
     // nom : option en tête du sondage
@@ -76,7 +78,10 @@
       else { depots = compte('deposer', j, lendemain(j)) ? depots + 1 : 0; if (depots >= 3) { parti = false; depots = 0; } }
     }
     if (parti && compte('deposer', j0, j0 + 24 * H)) { depots++; if (depots >= 3) parti = false; }
-    E.bons = bons; E.age = Math.min(2, Math.floor(bons / PALIER));
+    E.bons = bons + (TEST ? +D.bonus || 0 : 0);
+    E.ageAtteint = Math.min(2, Math.floor(E.bons / PALIER));
+    E.age = Math.min(E.ageAtteint, +D.age || 0); // l'évolution est déclenchée par l'administrateur, tribu réunie
+    E.pret = E.ageAtteint > E.age;
     E.parti = parti; E.depots = depots; E.depotAujourdhui = !!compte('deposer', j0, j0 + 24 * H);
     E.vac = enVac(now); E.nuit = estNuit(now);
     // aujourd'hui
@@ -207,6 +212,12 @@
       <div class="card dg-board">${tableau()}</div>${admin()}`;
   }
   function croissance() {
+    if (E.pret) {
+      const adm = ORDRE.find(m => estAdmin(m));
+      return `<div class="dg-grow pret"><div class="l"><span>✨ Prêt à devenir ${AGES[E.age + 1].n.toLowerCase()} !</span><span>${PALIER} / ${PALIER} jours</span></div><div class="dg-bar dg-gbar"><i style="width:100%"></i></div>
+        <small>${estAdmin(me()) ? 'Réunissez la tribu, montez le son, puis lancez l\'évolution : elle se jouera sur tous les téléphones où Tribu est ouvert.' : esc(nom(adm)) + ' lancera l\'évolution quand vous serez tous réunis. Gardez Tribu ouvert !'}</small>
+        ${estAdmin(me()) ? '<button class="primary dg-evobtn" data-dg="evoluer">✨ Faire évoluer maintenant</button>' : ''}</div>`;
+    }
     if (E.age >= 2) return `<div class="dg-grow"><div class="l"><span>Âge adulte atteint</span><span>🏆</span></div><div class="dg-bar dg-gbar"><i style="width:100%"></i></div><small>Il ne grandira plus et restera adulte.</small></div>`;
     const fait = E.bons - E.age * PALIER, reste = PALIER - fait;
     return `<div class="dg-grow"><div class="l"><span>Vers l'âge ${AGES[E.age + 1].n.toLowerCase()}</span><span><b>${fait}</b> / ${PALIER} jours</span></div><div class="dg-bar dg-gbar"><i style="width:${Math.round(fait / PALIER * 100)}%"></i></div>
@@ -224,6 +235,7 @@
     const vac = enVac(Date.now());
     return `<div class="dg-admin"><span class="label">Administrateur</span>
       ${E.stade === 'bebe' ? `<button class="ghost" data-dg="vacances">${vac ? 'Terminer le mode vacances' : 'Mode vacances (tout mettre en pause)'}</button>` : ''}
+      ${TEST ? `<span class="label">Version de test</span>${E.stade === 'oeuf' ? '<button class="ghost" data-dg="test-eclore">Test : faire éclore l\'œuf</button>' : `<button class="ghost" data-dg="test-jours">Test : +30 bons jours (${E.bons || 0} en tout)</button>`}` : ''}
       ${E.stade === 'bebe' ? '<button class="ghost" data-dg="evoapercu">Aperçu de l\'évolution (rien ne change)</button>' : ''}
       <button class="ghost danger" data-dg="recommencer">Recommencer à l'œuf</button></div>`;
   }
@@ -304,6 +316,15 @@
     await new Promise(r => { D2.querySelector('button').onclick = r; });
     ov.remove(); evoBusy = false; busy = false; boucleActuelle = ''; render();
   }
+  async function annoncerPret(a) { // « prêt à évoluer » : une annonce dans le chat (et sa notification), une seule fois
+    const cle = 'pret:' + D.o + ':' + a;
+    if (annonces[cle]) return; annonces[cle] = 1;
+    const msgs = await Sync.all('msg');
+    if (msgs.some(m => m.data && m.data.evo === cle)) return;
+    const nm = E.nom || 'Le dragon';
+    Sync.put('msg', 'msg:' + me() + ':pret' + D.o.replace(/[^a-z0-9]/gi, '') + a, { t: `✨ ${nm} est prêt à devenir ${AGES[a].n.toLowerCase()} ! Réunissez la tribu pour le voir évoluer`, at: Date.now(), sys: 'jeu', evo: cle });
+  }
+  const annonces = {};
   async function annoncer(a) { // message de la tribu, une seule fois (le premier téléphone qui voit l'évolution)
     const cle = D.o + ':' + a;
     const msgs = await Sync.all('msg');
@@ -319,11 +340,14 @@
     E = etat(Date.now());
     if (E.stade === 'bebe' && !E.parti) {
       const k = 'dragonAge_' + D.o, vu = S[k] == null ? -1 : S[k];
-      if (E.age > 0) annoncer(E.age);
+      if (E.pret) annoncerPret(E.age + 1);
       if (vu < 0 && E.age === 0) { S[k] = 0; save(); }
-      else if (E.age > vu && S.tab === 'dragon' && !busy && document.visibilityState === 'visible') {
-        S[k] = E.age; save(); render();
-        evolution(Math.max(0, E.age - 1), E.age);
+      else if (E.age > vu && !busy && !evoBusy && document.visibilityState === 'visible') {
+        // évolution déclenchée : elle se joue tout de suite, quel que soit l'onglet ouvert
+        S[k] = E.age; save();
+        if (S.tab !== 'dragon') showTab('dragon');
+        render();
+        evolution(E.age - 1, E.age);
         return;
       }
     }
@@ -383,7 +407,7 @@
     if (k === 'vacances') {
       const vacs = (D.vacs || []).slice(), now = Date.now(), cur = vacs.find(v => !v.f);
       if (cur) cur.f = now; else vacs.push({ d: now });
-      Sync.put('dragon', 'dragon:courant', { o: D.o, vacs }); toast(cur ? 'Fin des vacances' : 'Mode vacances : tout est en pause'); return;
+      Sync.put('dragon', 'dragon:courant', Object.assign({}, D, { vacs })); toast(cur ? 'Fin des vacances' : 'Mode vacances : tout est en pause'); return;
     }
     if (k === 'recommencer') {
       confirmer('Recommencer à l\'œuf ?', 'Le dragon actuel, son nom et le tableau des soigneurs seront effacés pour toute la tribu. Un nouvel œuf apparaîtra dans le nid.', 'Oui, recommencer', () => {
@@ -391,6 +415,16 @@
       });
       return;
     }
+    if (k === 'evoluer') {
+      confirmer('Faire évoluer maintenant ?', 'L\'évolution se jouera en même temps sur tous les téléphones où Tribu est ouvert. Montez le son !', '✨ Oui, faire évoluer', () => {
+        const a = E.age + 1;
+        Sync.put('dragon', 'dragon:courant', Object.assign({}, D, { age: a, evoT: Date.now() }));
+        annoncer(a);
+      });
+      return;
+    }
+    if (k === 'test-eclore') { Sync.put('dragon', 'dragon:courant', Object.assign({}, D, { eclos: Date.now() - 60e3 })); toast('Test : éclosion forcée'); return; }
+    if (k === 'test-jours') { Sync.put('dragon', 'dragon:courant', Object.assign({}, D, { bonus: (+D.bonus || 0) + PALIER })); toast('Test : +30 bons jours'); return; }
     if (k === 'evoapercu') { evolution(Math.max(0, E.age - 1), Math.max(1, E.age), true); return; }
     if (RG[k]) { const c = pre() + CLIP[k](); soin(k); toast(MOTS[k]); jouer(c); }
   }

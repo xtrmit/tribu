@@ -632,3 +632,7 @@ body.in-partie main > .screen{display:none !important}
 @keyframes dgspin{to{transform:rotate(360deg)}}
 @keyframes dgwf{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
 @keyframes dgsp{0%{opacity:0;transform:translate(0,0) scale(.4)}40%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1.2)}}
+.dg-grow.pret{background:linear-gradient(135deg,#FFF3D6,#FDE4DF);border:1px solid #F2C46D;border-radius:16px;padding:10px 12px;animation:dgpret 2.4s ease-in-out infinite}
+.dg-grow.pret .l{color:#8A5A00}
+.dg-evobtn{width:100%;margin-top:10px}
+@keyframes dgpret{50%{box-shadow:0 0 18px 2px rgba(242,196,109,.7)}}
