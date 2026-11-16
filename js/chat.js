@@ -69,7 +69,9 @@
     }
     const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 120;
     let html = '', lastDay = '', lastAuthor = '', lastT = 0;
+    const evoVus = {};
     for (const it of items) {
+      if (it.type === 'msg' && it.e.data.evo) { if (evoVus[it.e.data.evo]) continue; evoVus[it.e.data.evo] = 1; } // évolution du dragon : une seule annonce
       const dl = dayLabel(it.t);
       if (dl !== lastDay) { html += `<div class="day">${dl}</div>`; lastDay = dl; lastAuthor = ''; }
       if (it.type === 'poll') { html += pollHtml(it.e); lastAuthor = ''; continue; }

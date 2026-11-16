@@ -603,3 +603,32 @@ body.in-partie main > .screen{display:none !important}
 .arrive-ok-in p{margin:0;color:var(--muted)}
 .arrive-ok-ico{font-size:3.5em}
 .guide{margin:0;padding-left:20px;font-size:.88em;line-height:1.45;display:flex;flex-direction:column;gap:6px}
+
+/* ----- v0.16 croissance du dragon ----- */
+.dg-ages{display:flex;gap:6px;margin:4px 0 10px}
+.dg-ages span{flex:1;text-align:center;border-radius:12px;padding:6px 0;font-size:.8em;font-weight:800;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.dg-ages span.past{background:#E8F4EC;color:#2D7545;border-color:#CBE6D4}
+.dg-ages span.now{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.dg-grow{margin:10px 0 4px}
+.dg-grow .l{display:flex;justify-content:space-between;font-size:.85em;font-weight:700;margin-bottom:5px}
+.dg-grow small{display:block;color:var(--muted);font-size:.78em;margin-top:6px;line-height:1.35}
+.dg-gbar i{background:linear-gradient(90deg,#F2907F,var(--accent))!important}
+.dg-album{display:flex;gap:8px}
+.dg-album div{flex:1;text-align:center;font-size:.78em;color:var(--muted);font-weight:700}
+.dg-album img,.dg-album .lock{width:100%;aspect-ratio:1;border-radius:14px;object-fit:cover;display:block;margin-bottom:4px}
+.dg-album .lock{background:var(--accent-soft);display:grid;place-items:center;font-size:1.6em;color:var(--accent)}
+.dg-evo{position:fixed;inset:0;z-index:200;background:#0b0d1a;display:flex;flex-direction:column;overflow:hidden}
+.dg-evo .rays{position:absolute;left:50%;top:42%;width:900px;height:900px;margin:-450px 0 0 -450px;background:repeating-conic-gradient(rgba(255,255,255,.07) 0 10deg,transparent 10deg 20deg);opacity:0;transition:opacity 1s;animation:dgspin 14s linear infinite}
+.dg-evo.on .rays{opacity:1}
+.dg-evo .zone{position:relative;flex:1}
+.dg-evo .zone img{position:absolute;left:50%;top:46%;width:min(78vw,320px);height:min(78vw,320px);object-fit:contain;transform:translate(-50%,-50%) scale(var(--s,1))}
+.dg-evo .zone img.sil{filter:brightness(0) invert(1) drop-shadow(0 0 18px #fff) drop-shadow(0 0 40px #F2907F)}
+.dg-evo .zone img.hide{opacity:0}
+.dg-evo .wf{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.dg-evo .wf.go{animation:dgwf 1.4s ease-out}
+.dg-evo .dlg{position:relative;margin:0 14px calc(18px + env(safe-area-inset-bottom));background:#fff;color:#2B2320;border:4px solid #2B2320;border-radius:14px;padding:14px 16px;min-height:90px;font:600 1.05em 'Fredoka',sans-serif;line-height:1.35;box-shadow:inset 0 0 0 3px #F2907F}
+.dg-evo .dlg .primary{margin-top:10px;width:100%;color:#fff;background:#BF4A3A}
+.dg-evo .st{position:absolute;left:calc(50% - 11px);top:calc(46% - 11px);font-size:22px;opacity:0;animation:dgsp 1.8s ease-out forwards}
+@keyframes dgspin{to{transform:rotate(360deg)}}
+@keyframes dgwf{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+@keyframes dgsp{0%{opacity:0;transform:translate(0,0) scale(.4)}40%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1.2)}}

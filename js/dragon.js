@@ -29,6 +29,10 @@
   const RG = { manger: { max: 2, ecart: 4 }, sortir: { max: 4, ecart: 2 }, soigner: { max: 2, ecart: 4 }, laver: { ecart: 6 }, calin: { perso: 1 }, jouer: { perso: 1 } };
   const ACTIONS = [['manger', 'Nourrir'], ['sortir', 'Sortir'], ['laver', 'Laver'], ['soigner', 'Soigner'], ['calin', 'Câlin'], ['jouer', 'Jouer']];
   const HUMEUR = { content: ['😊', 'Content'], affame: ['😤', 'Affamé'], besoin: ['😬', 'Besoin de sortir'], sale: ['🫣', 'Sale'], malade: ['🤒', 'Malade'], endormi: ['😴', 'Endormi'] };
+  // Croissance (v0.16) : 30 bons jours (au moins la moitié des besoins) pour devenir ado, 30 de plus pour devenir adulte.
+  // Un jour raté ne compte pas mais ne remet pas le compteur à zéro ; le dragon ne rétrécit jamais.
+  const AGES = [{ k: 'bebe', n: 'Bébé', p: '', vig: 'vignette', def: 'Bébé dragon' }, { k: 'ado', n: 'Ado', p: 'ado-', vig: 'vignette-ado', def: 'Jeune dragon' }, { k: 'adulte', n: 'Adulte', p: 'adulte-', vig: 'vignette-adulte', def: 'Dragon' }];
+  const PALIER = 30;
 
   let D = { o: '1', vacs: [] }, soins = [], sondage = null, votes = [];
 
@@ -63,14 +67,16 @@
       E.sondage = { votes: votes.length };
     }
     // jours passés : départ et retour
-    let parti = false, mauvais = 0, depots = 0;
+    let parti = false, mauvais = 0, depots = 0, bons = 0;
     const j0 = debutJour(now);
     for (let j = lendemain(E.ne); j < j0; j = lendemain(j)) {
       if (enVac(j + 12 * H)) continue;
+      if (!parti && score(j) >= 0.5) bons++;
       if (!parti) { mauvais = score(j) < 0.5 ? mauvais + 1 : 0; if (mauvais >= 2) { parti = true; depots = 0; mauvais = 0; } }
       else { depots = compte('deposer', j, lendemain(j)) ? depots + 1 : 0; if (depots >= 3) { parti = false; depots = 0; } }
     }
     if (parti && compte('deposer', j0, j0 + 24 * H)) { depots++; if (depots >= 3) parti = false; }
+    E.bons = bons; E.age = Math.min(2, Math.floor(bons / PALIER));
     E.parti = parti; E.depots = depots; E.depotAujourdhui = !!compte('deposer', j0, j0 + 24 * H);
     E.vac = enVac(now); E.nuit = estNuit(now);
     // aujourd'hui
@@ -178,12 +184,14 @@
     const [emo, lbl] = HUMEUR[E.humeur];
     const hot = { affame: 'manger', besoin: 'sortir', sale: 'laver', malade: 'soigner' }[E.humeur];
     const bloque = busy || E.nuit || E.vac;
-    const nomL = E.nom ? esc(E.nom) : 'Bébé dragon';
+    const nomL = E.nom ? esc(E.nom) : AGES[E.age].def;
     const sous = E.vac ? 'Mode vacances' : 'Il est ' + hm(E.now);
     const nomInfo = !sondage ? `<button class="dg-link" data-dg="nommer">Lui trouver un nom →</button>`
       : (votes.length < ORDRE.length ? `<button class="dg-link" data-dg="chat">Sondage du nom en cours · ${votes.length}/${ORDRE.length} votes →</button>` : '');
     return `<div class="dg-name"><b>${nomL}</b><span class="muted">${sous}</span></div>${nomInfo}
+      <div class="dg-ages">${AGES.map((a, i) => `<span class="${i < E.age ? 'past' : i === E.age ? 'now' : ''}">${i < E.age ? '✓ ' : ''}${a.n}</span>`).join('')}</div>
       ${scene(`<span class="dg-mood">${emo} ${lbl}</span>`, E.nuit ? '<span class="dg-zz">Nuit · besoins en pause</span>' : E.vac ? '<span class="dg-zz">Vacances · tout est en pause</span>' : '')}
+      ${croissance()}
       <div class="dg-needs">
         <div class="dg-need"><div class="l"><span>Repas</span><span>${E.repas}/2</span></div>${bar(E.repas, 2)}</div>
         <div class="dg-need"><div class="l"><span>Sorties</span><span>${E.sorties}/4</span></div>${bar(E.sorties, 4)}</div>
@@ -193,8 +201,16 @@
       </div>
       <div class="dg-acts">${ACTIONS.map(([k, l]) => { const d = bloque ? '' : dispo(E, k); return `<button class="dg-act${hot === k && !d && !bloque ? ' hot' : ''}" data-dg="${k}"${bloque || d ? ' disabled' : ''}>${svg(k)}<span>${l}</span>${d ? `<small>${d}</small>` : ''}</button>`; }).join('')}</div>
       ${E.nuit ? '<p class="muted center dg-gap">Il dort : on le laisse tranquille jusqu\'à 7 h.</p>' : ''}
+      <h2 class="h3 dg-gap">Ses âges</h2>
+      <div class="dg-album">${AGES.map((a, i) => i <= E.age ? `<div><img src="${DIR}${a.vig}.jpg" alt="">${a.n}</div>` : `<div><span class="lock">?</span>${a.n}</div>`).join('')}</div>
       <h2 class="h3 dg-gap">Les soigneurs de la semaine</h2>
       <div class="card dg-board">${tableau()}</div>${admin()}`;
+  }
+  function croissance() {
+    if (E.age >= 2) return `<div class="dg-grow"><div class="l"><span>Âge adulte atteint</span><span>🏆</span></div><div class="dg-bar dg-gbar"><i style="width:100%"></i></div><small>Il ne grandira plus et restera adulte.</small></div>`;
+    const fait = E.bons - E.age * PALIER, reste = PALIER - fait;
+    return `<div class="dg-grow"><div class="l"><span>Vers l'âge ${AGES[E.age + 1].n.toLowerCase()}</span><span><b>${fait}</b> / ${PALIER} jours</span></div><div class="dg-bar dg-gbar"><i style="width:${Math.round(fait / PALIER * 100)}%"></i></div>
+      <small>Jours où la tribu a rempli au moins la moitié de ses besoins. Encore ${reste} jour${reste > 1 ? 's' : ''}.</small></div>`;
   }
   function tableau() {
     const d = new Date(debutJour(E.now)); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const lundi = d.getTime();
@@ -208,6 +224,7 @@
     const vac = enVac(Date.now());
     return `<div class="dg-admin"><span class="label">Administrateur</span>
       ${E.stade === 'bebe' ? `<button class="ghost" data-dg="vacances">${vac ? 'Terminer le mode vacances' : 'Mode vacances (tout mettre en pause)'}</button>` : ''}
+      ${E.stade === 'bebe' ? '<button class="ghost" data-dg="evoapercu">Aperçu de l\'évolution (rien ne change)</button>' : ''}
       <button class="ghost danger" data-dg="recommencer">Recommencer à l'œuf</button></div>`;
   }
   function tuile() {
@@ -215,8 +232,8 @@
     if (!me()) { el.innerHTML = ''; return; }
     let titre, txt, img;
     if (E.stade === 'oeuf') { titre = 'L\'œuf de la tribu'; txt = E.dejaChauffe.length + ' / 4 l\'ont réchauffé' + (E.chauffeurs[me()] ? '' : ' · et toi ?'); img = 'vignette-oeuf'; }
-    else if (E.parti) { titre = E.nom || 'Le dragon'; txt = 'Il est parti… une lettre vous attend'; img = 'vignette'; }
-    else { titre = E.nom || 'Bébé dragon'; const [emo, l] = HUMEUR[E.humeur]; const autres = (E.besoins || []).slice(1).map(x => ({ affame: 'il a faim', besoin: 'il veut sortir', sale: 'il est sale', malade: 'il est malade' })[x]); txt = emo + ' ' + l + (autres.length ? ' · et ' + autres.join(', ') : '') + (['content', 'endormi'].indexOf(E.humeur) < 0 ? ' · il a besoin de vous' : ''); img = 'vignette'; }
+    else if (E.parti) { titre = E.nom || 'Le dragon'; txt = 'Il est parti… une lettre vous attend'; img = AGES[E.age].vig; }
+    else { const ag = AGES[E.age]; titre = (E.nom || ag.def) + (E.age ? ' · ' + ag.n : ''); const [emo, l] = HUMEUR[E.humeur]; const autres = (E.besoins || []).slice(1).map(x => ({ affame: 'il a faim', besoin: 'il veut sortir', sale: 'il est sale', malade: 'il est malade' })[x]); txt = emo + ' ' + l + (autres.length ? ' · et ' + autres.join(', ') : '') + (['content', 'endormi'].indexOf(E.humeur) < 0 ? ' · il a besoin de vous' : ''); img = ag.vig; }
     el.innerHTML = `<button class="card dg-tile" data-go="dragon"><img src="${DIR}${img}.jpg" alt=""><span><b>${esc(titre)}</b><span>${esc(txt)} →</span></span></button>`;
   }
   function onglet() {
@@ -249,13 +266,67 @@
     box.innerHTML = html; boucleActuelle = '';
     setBoucle(boucle());
   }
-  const boucle = () => E.stade === 'oeuf' ? 'oeuf' : E.parti ? '' : E.humeur;
+  const pre = () => AGES[(E && E.age) || 0].p;
+  const boucle = () => E.stade === 'oeuf' ? 'oeuf' : E.parti ? '' : pre() + E.humeur;
+
+  /* ---------- évolution façon « Quoi ? … évolue ! » (une fois par téléphone et par âge) ---------- */
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let AC = null, evoBusy = false;
+  function tone(f, d, t = 0, type = 'square', v = 0.05) {
+    try {
+      AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+      const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = f; o.connect(g); g.connect(AC.destination);
+      const s = AC.currentTime + t; g.gain.setValueAtTime(v, s); g.gain.exponentialRampToValueAtTime(0.0001, s + d); o.start(s); o.stop(s + d + 0.02);
+    } catch (e) {}
+  }
+  async function taper(el, tx, fin) { el.textContent = ''; for (const ch of tx) { el.textContent += ch; await sleep(28); } if (fin) el.insertAdjacentHTML('beforeend', fin); }
+  async function evolution(de, a, apercu) {
+    if (evoBusy) return; evoBusy = true; busy = true;
+    const nm = E.nom || AGES[a].def, SC = [0.62, 0.85, 1.05];
+    const ov = document.createElement('div'); ov.className = 'dg-evo';
+    ov.innerHTML = `<div class="rays"></div><div class="zone"><img class="ea" src="${DIR}evo-${AGES[de].k}.webp" alt=""><img class="eb hide" src="${DIR}evo-${AGES[a].k}.webp" alt=""></div><div class="wf"></div><div class="dlg"></div>`;
+    document.body.appendChild(ov);
+    const A = ov.querySelector('.ea'), B = ov.querySelector('.eb'), D2 = ov.querySelector('.dlg'), W = ov.querySelector('.wf'), Z = ov.querySelector('.zone');
+    A.style.setProperty('--s', SC[de]); B.style.setProperty('--s', SC[a]);
+    await taper(D2, 'Quoi ?'); tone(660, 0.12); tone(880, 0.18, 0.13); await sleep(900);
+    await taper(D2, `Quoi ? ${nm} évolue !`); tone(523, 0.15); tone(659, 0.15, 0.16); tone(784, 0.3, 0.32); await sleep(1300);
+    ov.classList.add('on'); A.className = 'ea sil'; D2.textContent = '…'; await sleep(1100);
+    let d = 620, n = 0, f = 330;
+    while (d > 45) { const nv = n % 2 === 0; A.className = 'ea sil' + (nv ? ' hide' : ''); B.className = 'eb sil' + (nv ? '' : ' hide'); tone(f, 0.06, 0, 'triangle', 0.04); f *= 1.035; await sleep(d); d *= 0.84; n++; }
+    for (let i = 0; i < 10; i++) { A.className = 'ea sil' + (i % 2 ? '' : ' hide'); B.className = 'eb sil' + (i % 2 ? ' hide' : ''); await sleep(40); }
+    A.className = 'ea hide'; B.className = 'eb sil';
+    W.classList.add('go'); tone(1046, 0.5, 0, 'sawtooth', 0.05); vib([60, 40, 120]);
+    await sleep(250); B.className = 'eb';
+    for (let i = 0; i < 16; i++) { const an = i / 16 * Math.PI * 2, e = document.createElement('span'); e.className = 'st'; e.textContent = i % 3 ? '✨' : '💙'; e.style.setProperty('--x', Math.cos(an) * 160 + 'px'); e.style.setProperty('--y', Math.sin(an) * 160 + 'px'); e.style.animationDelay = (Math.random() * 0.3) + 's'; Z.appendChild(e); }
+    [523, 659, 784, 1046].forEach((fr, i) => tone(fr, 0.22, 0.15 * i, 'square', 0.05)); tone(1046, 0.7, 0.65, 'square', 0.05);
+    await sleep(700);
+    await taper(D2, `Félicitations ! ${nm} est devenu ${AGES[a].n.toLowerCase()} !`, `<div><button class="primary">${apercu ? 'Fermer l\'aperçu' : 'Le découvrir'}</button></div>`);
+    await new Promise(r => { D2.querySelector('button').onclick = r; });
+    ov.remove(); evoBusy = false; busy = false; boucleActuelle = ''; render();
+  }
+  async function annoncer(a) { // message de la tribu, une seule fois (le premier téléphone qui voit l'évolution)
+    const cle = D.o + ':' + a;
+    const msgs = await Sync.all('msg');
+    if (msgs.some(m => m.data && m.data.evo === cle)) return;
+    const nm = E.nom || 'Le dragon';
+    Sync.put('msg', 'msg:' + me() + ':evo' + D.o.replace(/[^a-z0-9]/gi, '') + a, { t: `🐉 ${nm} est devenu ${AGES[a].n.toLowerCase()} ! Bravo la tribu 🎉`, at: Date.now(), sys: 'jeu', evo: cle });
+  }
 
   async function refresh() {
     if (!me()) return;
     await load();
     const avant = E && E.stade;
     E = etat(Date.now());
+    if (E.stade === 'bebe' && !E.parti) {
+      const k = 'dragonAge_' + D.o, vu = S[k] == null ? -1 : S[k];
+      if (E.age > 0) annoncer(E.age);
+      if (vu < 0 && E.age === 0) { S[k] = 0; save(); }
+      else if (E.age > vu && S.tab === 'dragon' && !busy && document.visibilityState === 'visible') {
+        S[k] = E.age; save(); render();
+        evolution(Math.max(0, E.age - 1), E.age);
+        return;
+      }
+    }
     // éclosion vue par ce téléphone : on la joue une fois
     const vuKey = 'dragonEclos_' + D.o;
     if (E.stade === 'bebe' && !S[vuKey] && S.tab === 'dragon' && !busy) {
@@ -320,7 +391,8 @@
       });
       return;
     }
-    if (RG[k]) { const c = CLIP[k](); soin(k); toast(MOTS[k]); jouer(c); }
+    if (k === 'evoapercu') { evolution(Math.max(0, E.age - 1), Math.max(1, E.age), true); return; }
+    if (RG[k]) { const c = pre() + CLIP[k](); soin(k); toast(MOTS[k]); jouer(c); }
   }
   $('dragon').addEventListener('click', onClick);
   $('todayDragon').addEventListener('click', onClick);
